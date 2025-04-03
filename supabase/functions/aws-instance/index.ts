@@ -1,7 +1,10 @@
+// AWS EC2インスタンス管理用のSupabase Edge Function
+// インスタンスの作成、起動、停止、終了、設定変更などの機能を提供
+// また、SSH鍵の管理も行う
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { IAMClient, CreateUserCommand, CreateAccessKeyCommand, AttachUserPolicyCommand } from "npm:@aws-sdk/client-iam@^3";
-import { EC2Client, RunInstancesCommand, DescribeInstancesCommand, TerminateInstancesCommand, StopInstancesCommand, StartInstancesCommand } from "npm:@aws-sdk/client-ec2@^3";
+import { EC2Client, RunInstancesCommand, DescribeInstancesCommand, TerminateInstancesCommand, StopInstancesCommand, StartInstancesCommand, ModifyInstanceAttributeCommand, CreateTagsCommand } from "npm:@aws-sdk/client-ec2@^3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,22 +132,34 @@ serve(async (req) => {
           MaxCount: 1,
           KeyName: "teai-key",
           UserData: Buffer.from(`#!/bin/bash
-# Update system
-apt-get update
-apt-get upgrade -y
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$NAME
+fi
 
-# Install Nginx
-apt-get install -y nginx
-
-# Install Certbot
-apt-get install -y certbot python3-certbot-nginx
+# Update system and install required packages based on OS
+if [[ "$OS" == "Amazon Linux 2023" ]]; then
+    # Amazon Linux 2023
+    dnf update -y
+    dnf install -y nginx certbot python3-certbot-nginx aws-cli
+    APP_USER="ec2-user"
+    APP_DIR="/home/ec2-user"
+else
+    # Ubuntu
+    apt-get update
+    apt-get upgrade -y
+    apt-get install -y nginx certbot python3-certbot-nginx aws-cli
+    APP_USER="ubuntu"
+    APP_DIR="/home/ubuntu"
+fi
 
 # Get instance domain from instance tags
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 DOMAIN=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$INSTANCE_ID" "Name=key,Values=Domain" --query "Tags[0].Value" --output text)
 
 # Configure Nginx
-cat > /etc/nginx/sites-available/default << 'EOL'
+cat > /etc/nginx/conf.d/app.conf << 'EOL'
 server {
     listen 80;
     server_name $DOMAIN;
@@ -160,19 +175,27 @@ server {
 }
 EOL
 
-# Enable the site
-ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+# Remove default nginx config if it exists
+rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-available/default
 
 # Restart Nginx
-systemctl restart nginx
+if [[ "$OS" == "Amazon Linux 2023" ]]; then
+    systemctl enable nginx
+    systemctl restart nginx
+else
+    systemctl restart nginx
+fi
 
 # Get SSL certificate
 certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@teai.io
 
 # Start the application
-cd /home/ubuntu
-npm install
-npm start
+cd $APP_DIR
+if [ -f "package.json" ]; then
+    npm install
+    npm start
+fi
 `).toString('base64'),
           TagSpecifications: [
             {
@@ -205,6 +228,202 @@ npm start
               ...corsHeaders,
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': req.headers.get('Origin') || '*'
+            },
+            status: 200,
+          }
+        )
+
+      case 'update':
+        if (!instanceId) throw new Error('Instance ID is required')
+        const { instanceType, domain, publicKey } = await req.json()
+
+        let requiresRestart = false
+        let message = ''
+
+        // Update instance type if specified
+        if (instanceType) {
+          await ec2.send(new StopInstancesCommand({
+            InstanceIds: [instanceId],
+          }))
+          
+          // Wait for instance to stop
+          await new Promise(resolve => setTimeout(resolve, 60000))
+          
+          await ec2.send(new ModifyInstanceAttributeCommand({
+            InstanceId: instanceId,
+            InstanceType: { Value: instanceType }
+          }))
+
+          // Start the instance after type change
+          await ec2.send(new StartInstancesCommand({
+            InstanceIds: [instanceId],
+          }))
+
+          message += 'インスタンスタイプを変更し、再起動しました。'
+        }
+
+        // Update domain tag if specified
+        if (domain) {
+          await ec2.send(new CreateTagsCommand({
+            Resources: [instanceId],
+            Tags: [
+              {
+                Key: "Domain",
+                Value: domain
+              }
+            ]
+          }))
+          requiresRestart = true
+          message += 'ドメインを変更しました。再起動が必要です。'
+        }
+
+        // Update public key if specified
+        if (publicKey) {
+          const userData = `#!/bin/bash
+# Update authorized_keys
+echo "${publicKey}" > /home/ec2-user/.ssh/authorized_keys
+chown ec2-user:ec2-user /home/ec2-user/.ssh/authorized_keys
+chmod 600 /home/ec2-user/.ssh/authorized_keys
+`
+          await ec2.send(new ModifyInstanceAttributeCommand({
+            InstanceId: instanceId,
+            UserData: { Value: Buffer.from(userData).toString('base64') }
+          }))
+          requiresRestart = true
+          message += 'SSH鍵を更新しました。再起動が必要です。'
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            requiresRestart,
+            message: message || '設定を更新しました。'
+          }),
+          { 
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
+            },
+            status: 200,
+          }
+        )
+
+      case 'add_ssh_key':
+        if (!instanceId) throw new Error('Instance ID is required')
+        const { name, publicKey } = await req.json()
+
+        // SSH鍵をSupabaseに保存
+        const { error: keyError } = await supabaseClient
+          .from('instance_ssh_keys')
+          .insert({
+            instance_id: instanceId,
+            user_id: user.id,
+            name,
+            public_key: publicKey
+          })
+
+        if (keyError) throw keyError
+
+        // インスタンスのユーザーデータを更新
+        const userData = `#!/bin/bash
+# Update authorized_keys
+echo "${publicKey}" >> /home/ec2-user/.ssh/authorized_keys
+chown ec2-user:ec2-user /home/ec2-user/.ssh/authorized_keys
+chmod 600 /home/ec2-user/.ssh/authorized_keys
+`
+        await ec2.send(new ModifyInstanceAttributeCommand({
+          InstanceId: instanceId,
+          UserData: { Value: Buffer.from(userData).toString('base64') }
+        }))
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            requiresRestart: true,
+            message: 'SSH鍵を追加しました。再起動が必要です。'
+          }),
+          { 
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
+            },
+            status: 200,
+          }
+        )
+
+      case 'list_ssh_keys':
+        if (!instanceId) throw new Error('Instance ID is required')
+
+        const { data: sshKeys, error: listError } = await supabaseClient
+          .from('instance_ssh_keys')
+          .select('*')
+          .eq('instance_id', instanceId)
+          .eq('user_id', user.id)
+
+        if (listError) throw listError
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            sshKeys
+          }),
+          { 
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
+            },
+            status: 200,
+          }
+        )
+
+      case 'remove_ssh_key':
+        if (!instanceId) throw new Error('Instance ID is required')
+        const { keyId } = await req.json()
+
+        // SSH鍵をSupabaseから削除
+        const { error: deleteError } = await supabaseClient
+          .from('instance_ssh_keys')
+          .delete()
+          .eq('id', keyId)
+          .eq('instance_id', instanceId)
+          .eq('user_id', user.id)
+
+        if (deleteError) throw deleteError
+
+        // 残りの鍵を取得
+        const { data: remainingKeys } = await supabaseClient
+          .from('instance_ssh_keys')
+          .select('public_key')
+          .eq('instance_id', instanceId)
+          .eq('user_id', user.id)
+
+        // インスタンスのユーザーデータを更新
+        const remainingKeysData = remainingKeys?.map(k => k.public_key).join('\n') || ''
+        const updateUserData = `#!/bin/bash
+# Update authorized_keys
+echo "${remainingKeysData}" > /home/ec2-user/.ssh/authorized_keys
+chown ec2-user:ec2-user /home/ec2-user/.ssh/authorized_keys
+chmod 600 /home/ec2-user/.ssh/authorized_keys
+`
+        await ec2.send(new ModifyInstanceAttributeCommand({
+          InstanceId: instanceId,
+          UserData: { Value: Buffer.from(updateUserData).toString('base64') }
+        }))
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            requiresRestart: true,
+            message: 'SSH鍵を削除しました。再起動が必要です。'
+          }),
+          { 
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
             },
             status: 200,
           }
