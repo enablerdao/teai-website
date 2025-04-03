@@ -16,16 +16,15 @@ interface CreditData {
 }
 
 export default function CreditsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push('/login');
+    },
+  });
   const router = useRouter();
   const [creditData, setCreditData] = useState<CreditData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
 
   useEffect(() => {
     const fetchCreditData = async () => {
@@ -54,10 +53,6 @@ export default function CreditsPage() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
       </div>
     );
-  }
-
-  if (!session) {
-    return null;
   }
 
   return (
