@@ -7,14 +7,14 @@ import {
   ListAccountsCommand,
   CreateOrganizationalUnitCommand,
   ListOrganizationalUnitsForParentCommand,
-} from "https://esm.sh/@aws-sdk/client-organizations@3"
+} from "npm:@aws-sdk/client-organizations@^3"
 import {
   IAMClient,
   CreateUserCommand,
   CreateAccessKeyCommand,
   AttachUserPolicyCommand,
   ListAttachedUserPoliciesCommand,
-} from "https://esm.sh/@aws-sdk/client-iam@3"
+} from "npm:@aws-sdk/client-iam@^3"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

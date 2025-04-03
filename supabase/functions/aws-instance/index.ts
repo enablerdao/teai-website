@@ -7,51 +7,147 @@ import { IAMClient, CreateUserCommand, CreateAccessKeyCommand, AttachUserPolicyC
 import { EC2Client, RunInstancesCommand, DescribeInstancesCommand, TerminateInstancesCommand, StopInstancesCommand, StartInstancesCommand, ModifyInstanceAttributeCommand, CreateTagsCommand } from "npm:@aws-sdk/client-ec2@^3";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Max-Age': '86400',
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
+  console.log(`Incoming request: Method=${req.method}, Origin=${req.headers.get('Origin')}`)
+
+  // Initialize Supabase clients
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
+  const supabaseAnon = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  )
+
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
+    console.log('Handling OPTIONS request')
+    return new Response(null, {
+      status: 200,
       headers: {
-        ...corsHeaders,
-        'Access-Control-Allow-Origin': req.headers.get('Origin') || '*'
-      }
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Max-Age': '86400',
+      },
     })
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+  // Get the request origin
+  const origin = req.headers.get('origin')
+  console.log('Request origin:', origin)
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')!
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
+  // Define allowed origins
+  const allowedOrigins = [
+    'https://teai-website.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://localhost:3003',
+    'http://localhost:3004',
+    'http://localhost:3005',
+    'http://localhost:3006',
+    'http://localhost:3007',
+    'http://localhost:3008',
+    'http://localhost:3009',
+    'http://localhost:3010',
+    'https://vtjkhwlqmgsxjknggvnl.supabase.co'
+  ]
+
+  // Handle CORS for the actual request
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': origin ?? '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+
+  // Check if origin is allowed
+  if (!origin || !allowedOrigins.includes(origin)) {
+    console.error(`Origin not allowed: ${origin}`)
+    // 開発環境ではすべてのオリジンを許可
+    if (Deno.env.get('SUPABASE_ENV') === 'development') {
+      console.log('Development mode: allowing all origins')
+      corsHeaders['Access-Control-Allow-Origin'] = origin ?? '*'
+    } else {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Forbidden: Invalid Origin',
+          message: `このオリジンからのアクセスは許可されていません: ${origin}`,
+          allowedOrigins
+        }), 
+        { 
+          status: 403, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+            'Access-Control-Allow-Origin': origin ?? 'null',
+          } 
+        }
+      )
+    }
+  }
+
+  // Get the authorization header
+  const authHeader = req.headers.get('authorization')
+  console.log('Authorization header:', authHeader ? 'Present' : 'Missing')
+
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: 'Unauthorized',
+        message: '認証ヘッダーが見つかりません。'
+      }), 
+      { 
+        status: 401, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        } 
       }
     )
+  }
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
-    if (userError || !user) {
-      throw new Error('Unauthorized')
+  // Extract the token
+  const token = authHeader.replace('Bearer ', '')
+  console.log('Token present:', !!token)
+
+  try {
+    // Verify the JWT token using the Anon client
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token)
+    console.log('Auth result:', authError ? 'Error' : 'Success')
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Unauthorized',
+          message: '無効な認証トークンです。',
+          details: authError?.message
+        }), 
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          } 
+        }
+      )
     }
 
     const { action, instanceId } = await req.json()
 
     // AWS認証情報の取得または作成
     let awsCredentials;
-    const { data: existingCredentials, error: credsError } = await supabaseClient
+    // Use the Admin client for database operations
+    const { data: existingCredentials, error: credsError } = await supabaseAdmin
       .from('aws_credentials')
       .select('*')
       .eq('user_id', user.id)
@@ -95,7 +191,7 @@ serve(async (req) => {
       }))
 
       // 認証情報をSupabaseに保存
-      const { error: saveError } = await supabaseClient
+      const { error: saveError } = await supabaseAdmin
         .from('aws_credentials')
         .insert({
           user_id: user.id,
@@ -123,7 +219,7 @@ serve(async (req) => {
     })
 
     switch (action) {
-      case 'create':
+      case 'create': {
         // Create new instance
         const createResult = await ec2.send(new RunInstancesCommand({
           ImageId: "ami-0d7927c66a4f58940",
@@ -224,18 +320,15 @@ fi
             instanceId: createResult.Instances?.[0].InstanceId 
           }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*'
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'update':
+      case 'update': {
         if (!instanceId) throw new Error('Instance ID is required')
-        const { instanceType, domain, publicKey } = await req.json()
+        const { instanceType, domain, publicKey: updatePublicKey } = await req.json()
 
         let requiresRestart = false
         let message = ''
@@ -278,10 +371,10 @@ fi
         }
 
         // Update public key if specified
-        if (publicKey) {
+        if (updatePublicKey) {
           const userData = `#!/bin/bash
 # Update authorized_keys
-echo "${publicKey}" > /home/ec2-user/.ssh/authorized_keys
+echo "${updatePublicKey}" > /home/ec2-user/.ssh/authorized_keys
 chown ec2-user:ec2-user /home/ec2-user/.ssh/authorized_keys
 chmod 600 /home/ec2-user/.ssh/authorized_keys
 `
@@ -300,21 +393,18 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
             message: message || '設定を更新しました。'
           }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'add_ssh_key':
+      case 'add_ssh_key': {
         if (!instanceId) throw new Error('Instance ID is required')
         const { name, publicKey } = await req.json()
 
         // SSH鍵をSupabaseに保存
-        const { error: keyError } = await supabaseClient
+        const { error: keyError } = await supabaseAdmin
           .from('instance_ssh_keys')
           .insert({
             instance_id: instanceId,
@@ -344,19 +434,16 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
             message: 'SSH鍵を追加しました。再起動が必要です。'
           }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'list_ssh_keys':
+      case 'list_ssh_keys': {
         if (!instanceId) throw new Error('Instance ID is required')
 
-        const { data: sshKeys, error: listError } = await supabaseClient
+        const { data: sshKeys, error: listError } = await supabaseAdmin
           .from('instance_ssh_keys')
           .select('*')
           .eq('instance_id', instanceId)
@@ -370,21 +457,18 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
             sshKeys
           }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'remove_ssh_key':
+      case 'remove_ssh_key': {
         if (!instanceId) throw new Error('Instance ID is required')
         const { keyId } = await req.json()
 
         // SSH鍵をSupabaseから削除
-        const { error: deleteError } = await supabaseClient
+        const { error: deleteError } = await supabaseAdmin
           .from('instance_ssh_keys')
           .delete()
           .eq('id', keyId)
@@ -394,14 +478,14 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
         if (deleteError) throw deleteError
 
         // 残りの鍵を取得
-        const { data: remainingKeys } = await supabaseClient
+        const { data: remainingKeys } = await supabaseAdmin
           .from('instance_ssh_keys')
           .select('public_key')
           .eq('instance_id', instanceId)
           .eq('user_id', user.id)
 
         // インスタンスのユーザーデータを更新
-        const remainingKeysData = remainingKeys?.map(k => k.public_key).join('\n') || ''
+        const remainingKeysData = remainingKeys?.map((k: { public_key: string }) => k.public_key).join('\n') || ''
         const updateUserData = `#!/bin/bash
 # Update authorized_keys
 echo "${remainingKeysData}" > /home/ec2-user/.ssh/authorized_keys
@@ -420,16 +504,13 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
             message: 'SSH鍵を削除しました。再起動が必要です。'
           }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'start':
+      case 'start': {
         if (!instanceId) throw new Error('Instance ID is required')
         await ec2.send(new StartInstancesCommand({
           InstanceIds: [instanceId],
@@ -437,16 +518,13 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
         return new Response(
           JSON.stringify({ success: true }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'stop':
+      case 'stop': {
         if (!instanceId) throw new Error('Instance ID is required')
         await ec2.send(new StopInstancesCommand({
           InstanceIds: [instanceId],
@@ -454,16 +532,13 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
         return new Response(
           JSON.stringify({ success: true }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'terminate':
+      case 'terminate': {
         if (!instanceId) throw new Error('Instance ID is required')
         await ec2.send(new TerminateInstancesCommand({
           InstanceIds: [instanceId],
@@ -471,16 +546,13 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
         return new Response(
           JSON.stringify({ success: true }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*',
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      case 'list':
+      case 'list': {
         const describeResult = await ec2.send(new DescribeInstancesCommand({
           Filters: [
             {
@@ -494,8 +566,8 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
           ],
         }))
 
-        const instances = describeResult.Reservations?.flatMap(r => r.Instances || [])
-          .map(instance => ({
+        const instances = describeResult.Reservations?.flatMap((r: any) => r.Instances || [])
+          .map((instance: any) => ({
               InstanceId: instance.InstanceId,
               InstanceType: instance.InstanceType,
               State: instance.State?.Name,
@@ -510,17 +582,15 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
             instances: instances 
           }),
           { 
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': req.headers.get('Origin') || '*'
-            },
+            headers: corsHeaders,
             status: 200,
           }
         )
+      }
 
-      default:
+      default: {
         throw new Error('Invalid action')
+      }
     }
   } catch (error) {
     console.error('Error:', error);
