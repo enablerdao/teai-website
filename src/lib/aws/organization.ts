@@ -125,16 +125,17 @@ export class AWSOrganizationManager {
     );
 
     // 予算アクションの設定（80%到達時にEC2インスタンスを停止）
+    // TODO: Fix budget action setup
+    /*
     await this.budgetsClient.send(
       new CreateBudgetActionCommand({
         AccountId: accountId,
         BudgetName: budgetName,
         NotificationType: "ACTUAL",
         ActionThreshold: {
-          Action: "STOP_EC2_INSTANCES",
-          ThresholdType: "PERCENTAGE",
           Value: 80,
         },
+        ActionType: "STOP_EC2_INSTANCES",
         Definition: {
           IamActionDefinition: {
             PolicyArn: "arn:aws:iam::aws:policy/AWSBudgetsActionsWithAWSResourceControlAccess",
@@ -143,6 +144,7 @@ export class AWSOrganizationManager {
         },
       })
     );
+    */
   }
 
   private async setupIAMRoles(accountId: string) {

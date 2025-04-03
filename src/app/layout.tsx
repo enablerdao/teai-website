@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
-import { ThemeProvider } from '@/providers/theme-provider';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { ProvidersWrapper } from './providers-wrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -9,13 +9,12 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://teai.io'),
   title: {
     default: 'TeAI - AI開発者のためのクラウドプラットフォーム',
-    template: '%s | TeAI'
+    template: '%s | TeAI',
   },
-  description: 'TeAIは、AI開発者のためのクラウドプラットフォームです。AWSアカウントの自動作成、クレジット管理、インスタンス管理などの機能を提供します。',
-  keywords: ['AI', 'クラウド', 'AWS', '開発者', 'インスタンス管理', 'クレジット管理'],
+  description: 'TeAIは、AI開発者のためのクラウドプラットフォームです。',
+  keywords: ['AI', 'クラウド', '開発', 'プラットフォーム', 'TeAI'],
   icons: {
-    icon: ['/favicon.ico'],
-    apple: ['/apple-touch-icon.png'],
+    icon: '/favicon.ico',
   },
 };
 
@@ -25,17 +24,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" suppressHydrationWarning>
-      <head />
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ProvidersWrapper>
           {children}
-        </ThemeProvider>
+        </ProvidersWrapper>
       </body>
     </html>
   );

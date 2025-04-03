@@ -1,40 +1,63 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+interface CreditData {
+  balance: number;
+  transactions: Array<{
+    id: string;
+    amount: number;
+    type: string;
+    createdAt: string;
+  }>;
+}
+
 export default function CreditsPage() {
-  const { data: session } = useSession();
-  const [totalCredit, setTotalCredit] = useState(0);
-  const [creditHistory, setCreditHistory] = useState([]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [creditData, setCreditData] = useState<CreditData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCredits = async () => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    const fetchCreditData = async () => {
       if (session?.user?.id) {
         try {
-          const response = await fetch(`/api/credits/${session.user.id}`);
-          const data = await response.json();
-          setTotalCredit(data.total);
-          setCreditHistory(data.history);
+          const response = await fetch(`/api/credits?userId=${session.user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCreditData(data);
+          }
         } catch (error) {
-          console.error('Failed to fetch credits:', error);
-        } finally {
-          setIsLoading(false);
+          console.error('Error fetching credit data:', error);
         }
       }
+      setIsLoading(false);
     };
 
-    fetchCredits();
+    if (session?.user?.id) {
+      fetchCreditData();
+    }
   }, [session]);
 
-  if (isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
       </div>
     );
+  }
+
+  if (!session) {
+    return null;
   }
 
   return (
@@ -58,7 +81,7 @@ export default function CreditsPage() {
               現在の残高
             </h3>
             <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-              ¥{totalCredit.toLocaleString()}
+              ¥{creditData?.balance.toLocaleString()}
             </div>
           </div>
         </div>
@@ -71,29 +94,29 @@ export default function CreditsPage() {
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700">
             <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
-              {creditHistory.map((item: any) => (
-                <li key={item.id} className="px-4 py-4 sm:px-6">
+              {creditData?.transactions.map((transaction) => (
+                <li key={transaction.id} className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {item.description}
+                        {transaction.type === 'charge' ? 'チャージ' : '利用'}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(item.createdAt).toLocaleString()}
+                        {new Date(transaction.createdAt).toLocaleString()}
                       </p>
                     </div>
                     <div className={`text-sm font-medium ${
-                      item.type === 'charge' || item.type === 'initial'
+                      transaction.type === 'charge'
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-red-600 dark:text-red-400'
                     }`}>
-                      {item.type === 'charge' || item.type === 'initial' ? '+' : '-'}
-                      ¥{item.amount.toLocaleString()}
+                      {transaction.type === 'charge' ? '+' : '-'}
+                      ¥{transaction.amount.toLocaleString()}
                     </div>
                   </div>
                 </li>
               ))}
-              {creditHistory.length === 0 && (
+              {creditData?.transactions.length === 0 && (
                 <li className="px-4 py-4 sm:px-6 text-center text-gray-500 dark:text-gray-400">
                   利用履歴はありません
                 </li>

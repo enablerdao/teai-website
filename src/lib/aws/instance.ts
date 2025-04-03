@@ -20,7 +20,7 @@ export class AWSInstanceManager {
   }
 
   async createInstance(
-    instanceType: string,
+    instanceType: "t2.micro" | "t2.small" | "t2.medium",
     userId: string,
     imageId: string = "ami-0d52744d6551d851e" // Amazon Linux 2023
   ): Promise<string> {

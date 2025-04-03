@@ -1,7 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
@@ -17,38 +18,48 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCredit: 0,
-    activeInstances: 0,
-    totalSpent: 0,
-  });
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
 
   useEffect(() => {
     const fetchStats = async () => {
       if (session?.user?.id) {
         try {
-          const response = await fetch(`/api/dashboard/stats/${session.user.id}`);
-          const data = await response.json();
-          setStats(data);
+          const response = await fetch(`/api/dashboard/stats?userId=${session.user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setStats(data);
+          }
         } catch (error) {
-          console.error('Failed to fetch stats:', error);
-        } finally {
-          setIsLoading(false);
+          console.error('Error fetching dashboard stats:', error);
         }
       }
+      setIsLoading(false);
     };
 
-    fetchStats();
+    if (session?.user?.id) {
+      fetchStats();
+    }
   }, [session]);
 
-  if (isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
+  }
+
+  if (!session) {
+    return null;
   }
 
   return (
@@ -83,7 +94,7 @@ export default function DashboardPage() {
                   </dt>
                   <dd className="flex items-baseline">
                     <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                      ¥{stats.totalCredit.toLocaleString()}
+                      ¥{stats?.totalCredit.toLocaleString() || 'Loading...'}
                     </div>
                   </dd>
                 </dl>
@@ -116,7 +127,7 @@ export default function DashboardPage() {
                   </dt>
                   <dd className="flex items-baseline">
                     <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                      {stats.activeInstances}台
+                      {stats?.activeInstances.toLocaleString() || 'Loading...'}台
                     </div>
                   </dd>
                 </dl>
@@ -149,7 +160,7 @@ export default function DashboardPage() {
                   </dt>
                   <dd className="flex items-baseline">
                     <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                      ¥{stats.totalSpent.toLocaleString()}
+                      ¥{stats?.totalSpent.toLocaleString() || 'Loading...'}
                     </div>
                   </dd>
                 </dl>
