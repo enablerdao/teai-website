@@ -1,6 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
+import { Navbar } from '@/components/layout/navbar';
 import { ProvidersWrapper } from './providers-wrapper';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -24,10 +25,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="ja" suppressHydrationWarning className="h-full">
+      <body className={`${inter.className} min-h-full bg-background text-foreground antialiased`}>
         <ProvidersWrapper>
-          {children}
+          <Navbar />
+          <main className="min-h-screen">
+            {children}
+          </main>
         </ProvidersWrapper>
       </body>
     </html>

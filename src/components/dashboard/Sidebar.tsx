@@ -8,49 +8,57 @@ import {
   ServerIcon,
   CogIcon,
 } from '@heroicons/react/24/outline';
+import { useState } from 'react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navigation = [
-  { name: 'ダッシュボード', href: '/dashboard', icon: ServerIcon },
-  { name: 'クレジット管理', href: '/dashboard/credits', icon: CreditCardIcon },
-  { name: 'AWS管理', href: '/dashboard/aws', icon: CloudIcon },
-  { name: '設定', href: '/settings/profile', icon: CogIcon },
+  { name: 'インスタンス', href: '/instances', icon: ServerIcon },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col">
-      <div className="flex flex-col flex-grow pt-5 bg-white dark:bg-gray-800 overflow-y-auto">
-        <div className="flex-grow flex flex-col">
-          <nav className="flex-1 px-2 pb-4 space-y-1">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+    <div 
+      className="fixed left-0 top-16 h-[calc(100vh-4rem)] bg-card shadow-lg transition-all duration-300 ease-in-out"
+      style={{ width: isExpanded ? '240px' : '64px' }}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+    >
+      <nav className="flex flex-col h-full">
+        <div className="flex-1 px-2 py-4">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                  isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                <item.icon
+                  className={`mr-3 flex-shrink-0 h-6 w-6 ${
                     isActive
-                      ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-200'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'text-primary'
+                      : 'text-muted-foreground group-hover:text-accent-foreground'
                   }`}
-                >
-                  <item.icon
-                    className={`mr-3 flex-shrink-0 h-6 w-6 ${
-                      isActive
-                        ? 'text-indigo-600 dark:text-indigo-200'
-                        : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+                  aria-hidden="true"
+                />
+                {isExpanded && item.name}
+              </Link>
+            );
+          })}
         </div>
-      </div>
+        <div className="p-2 border-t border-border">
+          <div className="flex items-center justify-center">
+            <ThemeToggle />
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }

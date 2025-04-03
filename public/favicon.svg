@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00CC99">
+        <animate attributeName="stop-color" values="#00CC99;#00E6B0;#00CC99" dur="4s" repeatCount="indefinite"></animate>
+      </stop>
+      <stop offset="100%" stop-color="#3498DB">
+        <animate attributeName="stop-color" values="#3498DB;#4AA3E5;#3498DB" dur="4s" repeatCount="indefinite"></animate>
+      </stop>
+    </linearGradient>
+  </defs>
+  <path d="M2 16 C8 10, 16 10, 20 16 C24 22, 20 26, 12 28 C8 29, 4 30, 6 34 C8 38, 16 36, 30 32" 
+        stroke="url(#greenBlueGradient)" 
+        stroke-width="4" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round">
+  </path>
+</svg> 

@@ -1,152 +1,109 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useInstancesStore } from '@/lib/store/instances';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import { CreateInstanceModal } from '@/components/instances/CreateInstanceModal';
-import { PlayIcon, StopIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useEffect, useState } from 'react';
+
+interface Instance {
+  id: string;
+  name: string;
+  status: 'running' | 'stopped' | 'error';
+  type: string;
+  created_at: string;
+}
 
 export default function InstancesPage() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { instances, fetchInstances, startInstance, stopInstance, deleteInstance } = useInstancesStore();
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
-    fetchInstances();
-  }, [fetchInstances]);
-
-  const handleStartInstance = async (id: number) => {
-    try {
-      await startInstance(id);
-    } catch (error) {
-      console.error('Failed to start instance:', error);
-    }
-  };
-
-  const handleStopInstance = async (id: number) => {
-    try {
-      await stopInstance(id);
-    } catch (error) {
-      console.error('Failed to stop instance:', error);
-    }
-  };
-
-  const handleDeleteInstance = async (id: number) => {
-    if (window.confirm('このインスタンスを削除してもよろしいですか？')) {
-      try {
-        await deleteInstance(id);
-      } catch (error) {
-        console.error('Failed to delete instance:', error);
+    const fetchInstances = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('instances')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (data) {
+          setInstances(data);
+        }
       }
-    }
+    };
+    
+    fetchInstances();
+  }, []);
+
+  const handleStart = async (id: string) => {
+    // TODO: インスタンス起動処理
+    console.log('Starting instance:', id);
+  };
+
+  const handleStop = async (id: string) => {
+    // TODO: インスタンス停止処理
+    console.log('Stopping instance:', id);
+  };
+
+  const handleDelete = async (id: string) => {
+    // TODO: インスタンス削除処理
+    console.log('Deleting instance:', id);
   };
 
   return (
-    <DashboardLayout>
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="sm:flex sm:items-center">
-          <div className="sm:flex-auto">
-            <h1 className="text-base font-semibold leading-6 text-gray-900">インスタンス</h1>
-            <p className="mt-2 text-sm text-gray-700">
-              OpenHandsインスタンスの一覧です。
-            </p>
-          </div>
-          <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-            <button
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              インスタンスを作成
-            </button>
-          </div>
-        </div>
-        <div className="mt-8 flow-root">
-          <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead>
-                  <tr>
-                    <th
-                      scope="col"
-                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0"
-                    >
-                      名前
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                    >
-                      ステータス
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                    >
-                      タイプ
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0">
-                      <span className="sr-only">アクション</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {instances.map((instance) => (
-                    <tr key={instance.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
-                        {instance.name}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                            instance.status === 'running'
-                              ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
-                              : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
-                          }`}
-                        >
-                          {instance.status}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {instance.instance_type}
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <div className="flex justify-end space-x-2">
-                          {instance.status === 'running' ? (
-                            <button
-                              onClick={() => handleStopInstance(instance.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <StopIcon className="h-5 w-5" aria-hidden="true" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleStartInstance(instance.id)}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              <PlayIcon className="h-5 w-5" aria-hidden="true" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteInstance(instance.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <TrashIcon className="h-5 w-5" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold">インスタンス</h1>
+        <Button>新規インスタンスを作成</Button>
       </div>
 
-      <CreateInstanceModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      />
-    </DashboardLayout>
+      <div className="grid gap-6">
+        {instances.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-gray-500">インスタンスがありません</p>
+              <Button className="mt-4">最初のインスタンスを作成</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          instances.map((instance) => (
+            <Card key={instance.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{instance.name}</CardTitle>
+                    <CardDescription>Type: {instance.type}</CardDescription>
+                  </div>
+                  <div className={`px-2 py-1 rounded text-sm ${
+                    instance.status === 'running' ? 'bg-green-100 text-green-800' :
+                    instance.status === 'stopped' ? 'bg-gray-100 text-gray-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {instance.status}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-500">
+                    作成日: {new Date(instance.created_at).toLocaleDateString()}
+                  </p>
+                  <div className="flex gap-2">
+                    {instance.status === 'stopped' ? (
+                      <Button onClick={() => handleStart(instance.id)}>起動</Button>
+                    ) : (
+                      <Button onClick={() => handleStop(instance.id)}>停止</Button>
+                    )}
+                    <Button variant="outline" onClick={() => handleDelete(instance.id)}>
+                      削除
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

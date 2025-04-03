@@ -1,240 +1,219 @@
 'use client';
 
-import { Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Disclosure, Menu, Transition } from '@headlessui/react';
-import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
-import { Logo } from './Logo';
-import { ThemeToggle } from './ThemeToggle';
-import { useAuth } from '@/hooks/useAuth';
-import { config, isProduction, isPreview } from '@/config/env';
-
-const navigation = [
-  { name: 'ドキュメント', href: '/docs' },
-  { name: 'APIリファレンス', href: '/api-reference' },
-  { name: 'チュートリアル', href: '/tutorials' },
-  { name: 'ブログ', href: '/blog' },
-  { name: 'ステータス', href: '/status' },
-];
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
-}
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useTheme } from 'next-themes';
+import { Moon, Sun } from 'lucide-react';
 
 export function Header() {
-  const pathname = usePathname();
-  const { session, isAuthenticated, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  const Logo = () => (
+    <svg className="h-10 w-auto" viewBox="0 0 250 120" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        {`
+          @keyframes drawStroke {
+            0% {
+              stroke-dasharray: 300;
+              stroke-dashoffset: 300;
+            }
+            100% {
+              stroke-dasharray: 300;
+              stroke-dashoffset: 0;
+            }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          .te-stroke {
+            animation: drawStroke 1.5s ease-out forwards;
+          }
+          .text-fade {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+            animation-delay: 1s;
+          }
+        `}
+      </style>
+      <path
+        d="M20 60 C40 50, 60 50, 70 60 C80 70, 70 80, 50 85 C40 87, 30 90, 35 100 C40 110, 60 105, 90 95"
+        stroke="#00CC99"
+        strokeWidth="8"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="te-stroke"
+      />
+      <defs>
+        <linearGradient id="greenBlueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#00CC99">
+            <animate attributeName="stop-color" values="#00CC99;#00E6B0;#00CC99" dur="4s" repeatCount="indefinite" />
+          </stop>
+          <stop offset="100%" stopColor="#3498DB">
+            <animate attributeName="stop-color" values="#3498DB;#4AA3E5;#3498DB" dur="4s" repeatCount="indefinite" />
+          </stop>
+        </linearGradient>
+      </defs>
+      <text x="100" y="80" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="42" fill="url(#greenBlueGradient)" className="text-fade">
+        TeAI
+      </text>
+      <text x="190" y="80" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="42" fill="#95A5A6" className="text-fade dark:fill-gray-400">
+        .io
+      </text>
+    </svg>
+  );
+
+  const MobileLogo = () => (
+    <svg className="h-8 w-auto" viewBox="0 0 250 120" xmlns="http://www.w3.org/2000/svg">
+      <style>{`@keyframes fadeIn {from { opacity: 0; } to { opacity: 1; }}`}</style>
+      <defs><linearGradient id="gBG" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#00CC99" /><stop offset="100%" stopColor="#3498DB" /></linearGradient></defs>
+      <text x="100" y="80" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="42" fill="url(#gBG)" style={{animation: 'fadeIn 1s ease-out forwards'}}>TeAI</text>
+      <text x="190" y="80" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="42" fill="#95A5A6" style={{animation: 'fadeIn 1s ease-out forwards'}} className="dark:fill-gray-400">.io</text>
+    </svg>
+  );
 
   return (
-    <Disclosure as="nav" className="bg-white dark:bg-gray-800 shadow-sm">
-      {({ open }) => (
-        <>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 justify-between">
-              <div className="flex">
-                <Link href="/" className="flex flex-shrink-0 items-center">
-                  <Logo />
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center justify-between px-4">
+        <div className="flex items-center">
+          <Link href="/" className="mr-6 flex items-center space-x-2">
+            {mounted && <Logo />}
+          </Link>
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            <Link href="/docs" className="transition-colors hover:text-foreground/80">
+              ドキュメント
+            </Link>
+            <Link href="/tutorial" className="transition-colors hover:text-foreground/80">
+              チュートリアル
+            </Link>
+            <Link href="/status" className="transition-colors hover:text-foreground/80">
+              ステータス
+            </Link>
+          </nav>
+        </div>
+        <div className="hidden flex-1 items-center justify-end space-x-4 md:flex">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="inline-flex h-9 items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:text-foreground/80"
+          >
+            {mounted && (theme === 'dark' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            ))}
+          </button>
+          <Link
+            href="/login"
+            className="inline-flex h-9 items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:text-foreground/80"
+          >
+            ログイン
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+          >
+            新規登録
+          </Link>
+        </div>
+        <div className="flex items-center md:hidden">
+          <button
+            type="button"
+            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-foreground"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <span className="sr-only">メニューを開く</span>
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div className={`relative z-50 md:hidden ${mobileMenuOpen ? '' : 'hidden'}`} role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/30" onClick={() => setMobileMenuOpen(false)} />
+        <div className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-background px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="-m-1.5 p-1.5" onClick={() => setMobileMenuOpen(false)}>
+              <span className="sr-only">TeAI.io</span>
+              {mounted && <MobileLogo />}
+            </Link>
+            <button
+              type="button"
+              className="-m-2.5 rounded-md p-2.5 text-foreground"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <span className="sr-only">メニューを閉じる</span>
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="mt-6 flow-root">
+            <div className="-my-6 divide-y divide-gray-500/10 dark:divide-gray-700">
+              <div className="space-y-2 py-6">
+                <Link
+                  href="/docs"
+                  className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ドキュメント
                 </Link>
-                <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={classNames(
-                        pathname === item.href
-                          ? 'border-indigo-500 text-gray-900 dark:text-white'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white',
-                        'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium'
-                      )}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
+                <Link
+                  href="/tutorial"
+                  className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  チュートリアル
+                </Link>
+                <Link
+                  href="/status"
+                  className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ステータス
+                </Link>
               </div>
-              <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
-                {!isProduction && (
-                  <span className={`text-sm font-medium ${
-                    isPreview 
-                      ? 'text-yellow-600 dark:text-yellow-400'
-                      : 'text-green-600 dark:text-green-400'
-                  }`}>
-                    {isPreview ? 'テスト環境' : '開発環境'}
-                  </span>
-                )}
-                <ThemeToggle />
-                {isAuthenticated ? (
-                  <Menu as="div" className="relative ml-3">
-                    <div>
-                      <Menu.Button className="relative flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        <span className="sr-only">Open user menu</span>
-                        {session?.user?.image ? (
-                          <img
-                            className="h-8 w-8 rounded-full"
-                            src={session.user.image}
-                            alt=""
-                          />
-                        ) : (
-                          <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                        )}
-                      </Menu.Button>
-                    </div>
-                    <Transition
-                      as={Fragment}
-                      enter="transition ease-out duration-200"
-                      enterFrom="transform opacity-0 scale-95"
-                      enterTo="transform opacity-100 scale-100"
-                      leave="transition ease-in duration-75"
-                      leaveFrom="transform opacity-100 scale-100"
-                      leaveTo="transform opacity-0 scale-95"
-                    >
-                      <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                        <Menu.Item>
-                          {({ active }) => (
-                            <Link
-                              href="/dashboard"
-                              className={classNames(
-                                active ? 'bg-gray-100 dark:bg-gray-700' : '',
-                                'block px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
-                              )}
-                            >
-                              ダッシュボード
-                            </Link>
-                          )}
-                        </Menu.Item>
-                        <Menu.Item>
-                          {({ active }) => (
-                            <Link
-                              href="/settings"
-                              className={classNames(
-                                active ? 'bg-gray-100 dark:bg-gray-700' : '',
-                                'block px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
-                              )}
-                            >
-                              設定
-                            </Link>
-                          )}
-                        </Menu.Item>
-                        <Menu.Item>
-                          {({ active }) => (
-                            <button
-                              onClick={logout}
-                              className={classNames(
-                                active ? 'bg-gray-100 dark:bg-gray-700' : '',
-                                'block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
-                              )}
-                            >
-                              ログアウト
-                            </button>
-                          )}
-                        </Menu.Item>
-                      </Menu.Items>
-                    </Transition>
-                  </Menu>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white text-sm font-medium"
-                    >
-                      ログイン
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    >
-                      無料で始める
-                    </Link>
-                  </>
-                )}
-              </div>
-              <div className="-mr-2 flex items-center sm:hidden">
-                <Disclosure.Button className="inline-flex items-center justify-center rounded-md bg-white dark:bg-gray-800 p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                  <span className="sr-only">Open main menu</span>
-                  {open ? (
-                    <XMarkIcon className="block h-6 w-6" aria-hidden="true" />
-                  ) : (
-                    <Bars3Icon className="block h-6 w-6" aria-hidden="true" />
-                  )}
-                </Disclosure.Button>
+              <div className="py-6">
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  {mounted && (theme === 'dark' ? 'ライトモード' : 'ダークモード')}
+                </button>
+                <Link
+                  href="/login"
+                  className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ログイン
+                </Link>
+                <Link
+                  href="/register"
+                  className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  新規登録
+                </Link>
               </div>
             </div>
           </div>
-
-          <Disclosure.Panel className="sm:hidden">
-            <div className="space-y-1 pb-3 pt-2">
-              {navigation.map((item) => (
-                <Disclosure.Button
-                  key={item.name}
-                  as={Link}
-                  href={item.href}
-                  className={classNames(
-                    pathname === item.href
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200'
-                      : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-white',
-                    'block border-l-4 py-2 pl-3 pr-4 text-base font-medium'
-                  )}
-                >
-                  {item.name}
-                </Disclosure.Button>
-              ))}
-            </div>
-            <div className="border-t border-gray-200 dark:border-gray-700 pb-3 pt-4">
-              {isAuthenticated ? (
-                <div className="space-y-1">
-                  <div className="px-4 py-2">
-                    <div className="text-base font-medium text-gray-800 dark:text-white">
-                      {session?.user?.name}
-                    </div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      {session?.user?.email}
-                    </div>
-                  </div>
-                  <Disclosure.Button
-                    as={Link}
-                    href="/dashboard"
-                    className="block px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-white"
-                  >
-                    ダッシュボード
-                  </Disclosure.Button>
-                  <Disclosure.Button
-                    as={Link}
-                    href="/settings"
-                    className="block px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-white"
-                  >
-                    設定
-                  </Disclosure.Button>
-                  <Disclosure.Button
-                    as="button"
-                    onClick={logout}
-                    className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-white"
-                  >
-                    ログアウト
-                  </Disclosure.Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <Disclosure.Button
-                    as={Link}
-                    href="/login"
-                    className="block px-4 py-2 text-base font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-white"
-                  >
-                    ログイン
-                  </Disclosure.Button>
-                  <Disclosure.Button
-                    as={Link}
-                    href="/register"
-                    className="block px-4 py-2 text-base font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    無料で始める
-                  </Disclosure.Button>
-                </div>
-              )}
-            </div>
-          </Disclosure.Panel>
-        </>
-      )}
-    </Disclosure>
+        </div>
+      </div>
+    </header>
   );
-}
+} 

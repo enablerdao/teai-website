@@ -1,38 +1,60 @@
-import { getToken } from 'next-auth/jwt';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
-                    request.nextUrl.pathname.startsWith('/register');
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req: request, res });
+  const { data: { session } } = await supabase.auth.getSession();
+  const requestUrl = new URL(request.url);
+  const path = requestUrl.pathname;
 
-  // If user is authenticated and tries to access auth pages, redirect to dashboard
-  if (isAuthPage && token) {
+  // 認証が必要なパス
+  const protectedPaths = [
+    '/dashboard',    // ダッシュボード
+    '/settings',     // 設定ページ
+    '/profile',      // プロフィール設定
+    '/instances',    // インスタンス管理
+    '/billing',      // 課金・プラン管理
+    '/api-keys',     // APIキー管理
+    '/logs',         // ログ・履歴
+    '/agents',       // AIエージェント管理
+    '/models',       // モデル管理
+    '/deployments',  // デプロイメント管理
+  ];
+
+  // 認証済みユーザーがアクセスできないパス
+  const authPaths = ['/login', '/register'];
+
+  // 認証が必要なパスへのアクセスチェック
+  if (protectedPaths.some(p => path.startsWith(p))) {
+    if (!session) {
+      // 未認証の場合、ログインページにリダイレクト（現在のパスを保持）
+      return NextResponse.redirect(
+        new URL(`/login?from=${encodeURIComponent(path)}`, request.url)
+      );
+    }
+  }
+
+  // 認証済みユーザーのログイン/登録ページへのアクセスチェック
+  if (session && authPaths.some(p => path === p)) {
+    // 認証済みの場合、ダッシュボードにリダイレクト
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api');
-  const isPublicRoute = request.nextUrl.pathname === '/' || 
-                       request.nextUrl.pathname.startsWith('/legal') ||
-                       request.nextUrl.pathname.startsWith('/docs') ||
-                       request.nextUrl.pathname.startsWith('/blog');
-
-  // Public routes and API routes don't require authentication
-  if (isPublicRoute || isApiRoute) {
-    return NextResponse.next();
-  }
-
-  // Protected routes require authentication
-  if (!token && !isAuthPage) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return res;
 }
 
+// ミドルウェアを適用するパスを指定
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public (public files)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+  ],
 };

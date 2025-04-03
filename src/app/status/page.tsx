@@ -84,98 +84,124 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function Status() {
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
+export default function StatusPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0B1120] py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl lg:max-w-4xl">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-              システムステータス
-            </h1>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              最終更新: {currentTime.toLocaleTimeString()}
+    <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-2xl lg:mx-0">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">システムステータス</h2>
+        <p className="mt-6 text-lg leading-8 text-muted-foreground">
+          TeAI.ioの各サービスの稼働状況をリアルタイムで確認できます。
+          インシデントやメンテナンス情報も随時更新されます。
+        </p>
+      </div>
+
+      <div className="mx-auto mt-16 max-w-2xl lg:mx-0 lg:max-w-none">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* API Status */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">API</h3>
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                正常
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              すべてのAPIエンドポイントが正常に動作しています。
+            </p>
+            <div className="mt-4 text-xs text-muted-foreground">
+              最終更新: 2024-03-21 10:00 JST
             </div>
           </div>
 
-          <div className="mt-8">
-            <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 dark:ring-gray-700">
-              <div className="p-6">
-                <h2 className="text-base font-semibold leading-6 text-gray-900 dark:text-white">
-                  現在のステータス
-                </h2>
-                <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-700">
-                  {services.map((service) => (
-                    <div
-                      key={service.name}
-                      className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2 sm:gap-6"
-                    >
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {service.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          {service.description}
-                        </p>
-                      </div>
-                      <div className="sm:text-right">
-                        <StatusBadge status={service.status} />
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="mr-4">Uptime: {service.uptime}</span>
-                          <span>Latency: {service.latency}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {/* AI Service Status */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">AIサービス</h3>
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                正常
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              AIモデルとエージェントが正常に動作しています。
+            </p>
+            <div className="mt-4 text-xs text-muted-foreground">
+              最終更新: 2024-03-21 10:00 JST
+            </div>
+          </div>
+
+          {/* Database Status */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">データベース</h3>
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                正常
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              データベース接続とクエリが正常に動作しています。
+            </p>
+            <div className="mt-4 text-xs text-muted-foreground">
+              最終更新: 2024-03-21 10:00 JST
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Incidents */}
+        <div className="mt-16">
+          <h3 className="text-xl font-semibold text-foreground">最近のインシデント</h3>
+          <div className="mt-6 space-y-6">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-medium text-foreground">メンテナンス完了</h4>
+                <span className="text-sm text-muted-foreground">2024-03-20</span>
               </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                システムメンテナンスが完了し、すべてのサービスが正常に復旧しました。
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-medium text-foreground">パフォーマンス改善</h4>
+                <span className="text-sm text-muted-foreground">2024-03-19</span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                AIサービスの応答速度を改善するための最適化を実施しました。
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-medium text-foreground">セキュリティアップデート</h4>
+                <span className="text-sm text-muted-foreground">2024-03-18</span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                セキュリティ強化のためのシステムアップデートを実施しました。
+              </p>
             </div>
           </div>
+        </div>
 
-          <div className="mt-12">
-            <h2 className="text-base font-semibold leading-6 text-gray-900 dark:text-white">
-              最近のインシデント
-            </h2>
-            <div className="mt-4 space-y-6">
-              {incidents.map((incident) => (
-                <div
-                  key={incident.date + incident.title}
-                  className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-sm ring-1 ring-gray-900/5 dark:ring-gray-700"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                      {incident.title}
-                    </h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {incident.date}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {incident.description}
-                  </p>
-                  <div className="mt-4 flex items-center justify-between text-sm">
-                    <span
-                      className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                        incident.status === 'resolved'
-                          ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 ring-1 ring-inset ring-green-600/20 dark:ring-green-300/20'
-                          : ''
-                      }`}
-                    >
-                      {incident.status === 'resolved' ? '解決済み' : '対応中'}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      影響時間: {incident.duration}
-                    </span>
-                  </div>
-                </div>
-              ))}
+        {/* System Metrics */}
+        <div className="mt-16">
+          <h3 className="text-xl font-semibold text-foreground">システムメトリクス</h3>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h4 className="text-sm font-medium text-foreground">稼働率</h4>
+              <p className="mt-2 text-2xl font-semibold text-foreground">99.99%</p>
+              <p className="mt-1 text-xs text-muted-foreground">過去30日間の平均</p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h4 className="text-sm font-medium text-foreground">平均応答時間</h4>
+              <p className="mt-2 text-2xl font-semibold text-foreground">120ms</p>
+              <p className="mt-1 text-xs text-muted-foreground">APIエンドポイント</p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h4 className="text-sm font-medium text-foreground">アクティブユーザー</h4>
+              <p className="mt-2 text-2xl font-semibold text-foreground">1,234</p>
+              <p className="mt-1 text-xs text-muted-foreground">現在の同時接続数</p>
             </div>
           </div>
         </div>
