@@ -18,7 +18,10 @@ import Image from 'next/image';
 export function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const supabase = createClientComponentClient();
+  const supabase = createClientComponentClient({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  });
 
   useEffect(() => {
     const getUser = async () => {

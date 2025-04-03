@@ -123,11 +123,57 @@ serve(async (req) => {
       case 'create':
         // Create new instance
         const createResult = await ec2.send(new RunInstancesCommand({
-          ImageId: "ami-0d7927c66a4f58940", // Updated AMI
-          InstanceType: "t2.micro",
+          ImageId: "ami-0d7927c66a4f58940",
+          InstanceType: "t2.medium",
           MinCount: 1,
           MaxCount: 1,
           KeyName: "teai-key",
+          UserData: Buffer.from(`#!/bin/bash
+# Update system
+apt-get update
+apt-get upgrade -y
+
+# Install Nginx
+apt-get install -y nginx
+
+# Install Certbot
+apt-get install -y certbot python3-certbot-nginx
+
+# Get instance domain from instance tags
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+DOMAIN=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$INSTANCE_ID" "Name=key,Values=Domain" --query "Tags[0].Value" --output text)
+
+# Configure Nginx
+cat > /etc/nginx/sites-available/default << 'EOL'
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOL
+
+# Enable the site
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+
+# Restart Nginx
+systemctl restart nginx
+
+# Get SSL certificate
+certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@teai.io
+
+# Start the application
+cd /home/ubuntu
+npm install
+npm start
+`).toString('base64'),
           TagSpecifications: [
             {
               ResourceType: "instance",
@@ -139,6 +185,10 @@ serve(async (req) => {
                 {
                   Key: "User",
                   Value: user.id,
+                },
+                {
+                  Key: "Domain",
+                  Value: `oh-${Math.random().toString(36).substring(2, 8)}.teai.io`,
                 },
               ],
             },
