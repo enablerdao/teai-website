@@ -31,7 +31,7 @@ export default function CreditsPage() {
     const fetchCreditData = async () => {
       if (session?.user?.id) {
         try {
-          const response = await fetch(`/api/credits?userId=${session.user.id}`);
+          const response = await fetch(`/api/credits/${session.user.id}`);
           if (response.ok) {
             const data = await response.json();
             setCreditData(data);
@@ -81,7 +81,7 @@ export default function CreditsPage() {
               現在の残高
             </h3>
             <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-              ¥{creditData?.balance.toLocaleString()}
+              ¥{creditData?.balance?.toLocaleString() || 0}
             </div>
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function CreditsPage() {
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700">
             <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
-              {creditData?.transactions.map((transaction) => (
+              {creditData?.transactions?.map((transaction) => (
                 <li key={transaction.id} className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -116,7 +116,7 @@ export default function CreditsPage() {
                   </div>
                 </li>
               ))}
-              {creditData?.transactions.length === 0 && (
+              {(!creditData?.transactions || creditData.transactions.length === 0) && (
                 <li className="px-4 py-4 sm:px-6 text-center text-gray-500 dark:text-gray-400">
                   利用履歴はありません
                 </li>
