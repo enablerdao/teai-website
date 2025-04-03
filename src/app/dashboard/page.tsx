@@ -23,8 +23,11 @@ import { ja } from 'date-fns/locale'; // For Japanese locale
 interface Instance {
   InstanceId: string;
   InstanceType: string;
-  State: string;
-  PublicIpAddress?: string;
+  State: {
+    Code: number;
+    Name: string;
+  };
+  PublicIpAddress: string | null;
   LaunchTime: string;
   AccessUrl?: string;
   Tags?: Array<{

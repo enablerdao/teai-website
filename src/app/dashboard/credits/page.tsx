@@ -1,9 +1,11 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 interface CreditData {
   balance: number;
@@ -16,38 +18,35 @@ interface CreditData {
 }
 
 export default function CreditsPage() {
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      router.push('/login');
-    },
-  });
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [creditData, setCreditData] = useState<CreditData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCreditData = async () => {
-      if (session?.user?.id) {
-        try {
-          const response = await fetch(`/api/credits/${session.user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setCreditData(data);
-          }
-        } catch (error) {
-          console.error('Error fetching credit data:', error);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push('/login');
+          return;
         }
+
+        const response = await fetch(`/api/credits/${session.user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCreditData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching credit data:', error);
       }
       setIsLoading(false);
     };
 
-    if (session?.user?.id) {
-      fetchCreditData();
-    }
-  }, [session]);
+    fetchCreditData();
+  }, [router, supabase]);
 
-  if (status === 'loading' || isLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
