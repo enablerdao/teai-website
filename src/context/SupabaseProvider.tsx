@@ -18,7 +18,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => 
     createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.SUPABASE_ANON_KEY!
     )
   );
   const [user, setUser] = useState<User | null>(null);
@@ -34,7 +34,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       
       // リアルタイムでのセッション変更を監視
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
