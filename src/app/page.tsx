@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Zap, Key, ShieldCheck, Rocket, Cpu, Languages, Code2, ExternalLink, BotMessageSquare, MousePointerClick, Github
+  Zap, Key, ShieldCheck, Rocket, Cpu, Languages, Code2, ExternalLink, BotMessageSquare, MousePointerClick, Github, CloudOff, Tablet, Copy
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { motion } from 'framer-motion';
@@ -189,6 +189,9 @@ export default function HomePage() {
                 { title: 'パワフルなAI機能', icon: BotMessageSquare, text: 'コード生成・修正、コマンド実行、Webブラウジングなど、AIが開発作業を強力に支援。' },
                 { title: '自然言語で操作', icon: Languages, text: '専門知識がなくても大丈夫。普段の言葉でAIに指示を出せます。' },
                 { title: '安全な環境', icon: ShieldCheck, text: 'SSH公開鍵認証やAWS IAMロールで、セキュアなアクセス制御を実現。' },
+                { title: 'ローカル負荷ゼロ', icon: CloudOff, text: '重い開発環境や処理はクラウドにお任せ。あなたのPCスペックを気にする必要はありません。' },
+                { title: '場所を選ばない開発', icon: Tablet, text: 'インターネット接続があれば、PC、タブレット、スマートフォンからでも作業可能。' },
+                { title: '高速プロトタイピング', icon: Copy, text: '複数のインスタンスで異なるアイデアや設定を同時に試し、開発をスピードアップ。' },
               ].map((feature) => (
                 <motion.div key={feature.title} variants={fadeIn} >
                     <Card className="h-full hover:shadow-lg transition-shadow hover:border-primary/50 transform hover:-translate-y-1">

@@ -1,144 +1,144 @@
 'use client';
 
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Rocket, Zap, Key, ShieldCheck, CloudOff, Tablet, Copy, GitBranch, Code2, MousePointerClick, ExternalLink
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+
+// Animation variants (can reuse from homepage or define new ones)
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+};
+
 export default function DocsPage() {
   return (
-    <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
-      <div className="mx-auto max-w-2xl lg:mx-0">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">ドキュメント</h2>
-        <p className="mt-6 text-lg leading-8 text-muted-foreground">
-          TeAI.ioの包括的なドキュメント。APIリファレンス、開発ガイド、セキュリティガイドなど、
-          必要な情報をすべて網羅しています。
-        </p>
-      </div>
+    <div className="bg-background text-foreground">
+      <div className="container mx-auto px-4 md:px-6 py-16 md:py-24 lg:py-32">
+        
+        <motion.div initial="hidden" animate="visible" variants={fadeIn}>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-center mb-4">
+            Te<span className="text-2xl md:text-3xl lg:text-4xl align-middle">🖐️</span>AI.io ドキュメント
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground text-center max-w-3xl mx-auto mb-12">
+            TeAI.io へようこそ！ AI を活用した開発の効率化と、誰でも簡単に開発を始められる環境を提供します。
+          </p>
+        </motion.div>
 
-      <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 lg:mx-0 lg:mt-10 lg:max-w-none lg:grid-cols-3">
-        {/* API Reference */}
-        <article className="flex flex-col items-start">
-          <div className="flex items-center gap-x-4 text-xs">
-            <span className="relative z-10 rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary">API</span>
-          </div>
-          <div className="group relative">
-            <h3 className="mt-3 text-lg font-semibold leading-6 text-foreground group-hover:text-foreground/80">
-              <a href="/docs/api">
-                <span className="absolute inset-0" />
-                APIリファレンス
-              </a>
-            </h3>
-            <p className="mt-5 line-clamp-3 text-sm leading-6 text-muted-foreground">
-              TeAI.ioのRESTful APIの詳細な仕様。認証、エンドポイント、リクエスト/レスポンス形式など。
+        <div className="space-y-16">
+          {/* 1. TeAI.ioとは？ */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeIn}>
+            <h2 className="text-3xl font-semibold tracking-tight mb-6 border-b pb-2">Te<span className="text-xl align-middle">🖐️</span>AI.io について</h2>
+            <p className="text-lg text-muted-foreground mb-4">
+              TeAI.io は、AI によるコード生成、コマンド実行、ウェブ操作などを自然言語で指示できる、開発支援に特化したクラウドプラットフォーム (SaaS) です。
+              面倒な環境構築や API キーの管理といった手間から開発者を解放し、アイデアの実装に集中できる環境を提供することを目的としています。
             </p>
-            <div className="mt-4 flex items-center gap-x-4 text-xs">
-              <a href="/docs/api/authentication" className="relative hover:text-foreground/80">
-                認証
-              </a>
-              <a href="/docs/api/endpoints" className="relative hover:text-foreground/80">
-                エンドポイント
-              </a>
-              <a href="/docs/api/rate-limits" className="relative hover:text-foreground/80">
-                レート制限
-              </a>
-            </div>
-          </div>
-        </article>
-
-        {/* Development Guides */}
-        <article className="flex flex-col items-start">
-          <div className="flex items-center gap-x-4 text-xs">
-            <span className="relative z-10 rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary">開発</span>
-          </div>
-          <div className="group relative">
-            <h3 className="mt-3 text-lg font-semibold leading-6 text-foreground group-hover:text-foreground/80">
-              <a href="/docs/development">
-                <span className="absolute inset-0" />
-                開発ガイド
-              </a>
-            </h3>
-            <p className="mt-5 line-clamp-3 text-sm leading-6 text-muted-foreground">
-              OpenHandsフレームワークを使用したAIエージェントの開発方法。ベストプラクティスと実装例。
+            <p className="text-lg text-muted-foreground">
+              わずか数クリックで、必要なツールがプリインストールされた安全な開発サーバーを起動し、すぐに AI のパワーを活用し始めることができます。
             </p>
-            <div className="mt-4 flex items-center gap-x-4 text-xs">
-              <a href="/docs/development/getting-started" className="relative hover:text-foreground/80">
-                はじめに
-              </a>
-              <a href="/docs/development/agents" className="relative hover:text-foreground/80">
-                エージェント開発
-              </a>
-              <a href="/docs/development/deployment" className="relative hover:text-foreground/80">
-                デプロイ
-              </a>
-            </div>
-          </div>
-        </article>
+          </motion.section>
 
-        {/* Security Guides */}
-        <article className="flex flex-col items-start">
-          <div className="flex items-center gap-x-4 text-xs">
-            <span className="relative z-10 rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary">セキュリティ</span>
-          </div>
-          <div className="group relative">
-            <h3 className="mt-3 text-lg font-semibold leading-6 text-foreground group-hover:text-foreground/80">
-              <a href="/docs/security">
-                <span className="absolute inset-0" />
-                セキュリティガイド
-              </a>
-            </h3>
-            <p className="mt-5 line-clamp-3 text-sm leading-6 text-muted-foreground">
-              セキュリティベストプラクティス、認証、アクセス制御、データ保護に関するガイドライン。
+          {/* 2. 基盤技術 OpenHands */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeIn}>
+            <h2 className="text-3xl font-semibold tracking-tight mb-6 border-b pb-2">基盤技術：OpenHands</h2>
+            <p className="text-lg text-muted-foreground mb-4">
+              TeAI.io の中核を成すのは、強力なオープンソース AI プラットフォームである <a href="https://github.com/All-Hands-AI/OpenHands" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenHands <ExternalLink className="inline-block h-4 w-4 ml-1"/></a> です。
+              OpenHands は、大規模言語モデル (LLM) がユーザーのコンピューター環境を理解し、様々なタスクを実行できるように設計されています。
             </p>
-            <div className="mt-4 flex items-center gap-x-4 text-xs">
-              <a href="/docs/security/authentication" className="relative hover:text-foreground/80">
-                認証
-              </a>
-              <a href="/docs/security/authorization" className="relative hover:text-foreground/80">
-                認可
-              </a>
-              <a href="/docs/security/data-protection" className="relative hover:text-foreground/80">
-                データ保護
-              </a>
-            </div>
-          </div>
-        </article>
-      </div>
+            <ul className="list-disc list-inside space-y-2 text-lg text-muted-foreground mb-4 ml-4">
+              <li><Code2 className="inline-block h-5 w-5 mr-2 text-primary"/> ファイルシステムの操作、コードの生成・編集・実行</li>
+              <li><MousePointerClick className="inline-block h-5 w-5 mr-2 text-primary"/> Web ブラウザの操作（情報収集、フォーム入力など）</li>
+              <li><Zap className="inline-block h-5 w-5 mr-2 text-primary"/> コマンドラインインターフェースの操作</li>
+            </ul>
+            <p className="text-lg text-muted-foreground">
+              TeAI.io はこの OpenHands をクラウド上で簡単に利用できるようにし、管理の手間を省きながら、その強力な機能を提供します。
+            </p>
+          </motion.section>
 
-      {/* Quick Links */}
-      <div className="mx-auto mt-16 max-w-2xl lg:mx-0 lg:max-w-none">
-        <h3 className="text-xl font-semibold text-foreground">クイックリンク</h3>
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <a href="/docs/api/quickstart" className="group relative flex items-center gap-x-3 rounded-lg border border-border bg-card p-6 hover:bg-card/80">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20">
-              <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H6A2.25 2.25 0 003.75 6v2.25A2.25 2.25 0 006 10.5zm0 9.75h2.25A2.25 2.25 0 0010.5 18v-2.25a2.25 2.25 0 00-2.25-2.25H6a2.25 2.25 0 00-2.25 2.25V18A2.25 2.25 0 006 20.25zm9.75-9.75H18a2.25 2.25 0 002.25-2.25V6A2.25 2.25 0 0018 3.75h-2.25A2.25 2.25 0 0013.5 6v2.25a2.25 2.25 0 002.25 2.25z" />
-              </svg>
+          {/* 3. TeAI.io だからできること */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeIn}>
+            <h2 className="text-3xl font-semibold tracking-tight mb-6 border-b pb-2">Te<span className="text-xl align-middle">🖐️</span>AI.io のメリット</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[ 
+                  { title: '超高速セットアップ', icon: Zap, text: '数クリックで開発サーバー起動。環境構築不要。' },
+                  { title: '簡単なキー管理', icon: Key, text: '各種 API キーを GUI で安全かつ簡単に管理。' },
+                  { title: 'ローカル負荷ゼロ', icon: CloudOff, text: '重い処理はクラウドへ。PC スペックを気にせず開発。' },
+                  { title: '場所を選ばない開発', icon: Tablet, text: 'ネット環境があれば、どこからでも、どのデバイスからでも。' },
+                  { title: '高速プロトタイピング', icon: Copy, text: '複数インスタンスでアイデアを並行して検証可能。' },
+                  { title: '安全な環境', icon: ShieldCheck, text: 'SSH 鍵や IAM ロールでセキュアなアクセスを実現。' },
+              ].map((feature, i) => (
+                <motion.div key={feature.title} custom={i * 0.1} variants={fadeIn}>
+                    <Card className="h-full border-l-4 border-primary bg-card shadow-sm">
+                        <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                           <feature.icon className="h-8 w-8 text-primary" />
+                           <CardTitle className="text-lg font-semibold">{feature.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground">{feature.text}</p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+              ))}
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">APIクイックスタート</h4>
-              <p className="mt-1 text-sm text-muted-foreground">5分で始められるAPIの基本的な使い方</p>
-            </div>
-          </a>
+          </motion.section>
 
-          <a href="/docs/development/examples" className="group relative flex items-center gap-x-3 rounded-lg border border-border bg-card p-6 hover:bg-card/80">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20">
-              <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-              </svg>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">コード例</h4>
-              <p className="mt-1 text-sm text-muted-foreground">実践的なコード例とユースケース</p>
-            </div>
-          </a>
+          {/* 4. オープンソース */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeIn}>
+            <h2 className="text-3xl font-semibold tracking-tight mb-6 border-b pb-2">オープンソースの力</h2>
+            <p className="text-lg text-muted-foreground mb-4">
+              TeAI.io 自体もオープンソースプロジェクトとして開発されています。これは、特定のベンダーにロックインされる心配がないことを意味します。
+              ソースコードは公開されており、誰でもその仕組みを確認し、改善に参加することができます。
+            </p>
+            <p className="text-lg text-muted-foreground mb-4">
+              私たちは、コミュニティと共に TeAI.io をより良くしていくことを目指しています。バグ報告、機能提案、コードの貢献など、あらゆる形での参加を歓迎します。
+            </p>
+             <Button asChild variant="outline">
+                <a href="https://github.com/enablerdao/teai-website" target="_blank" rel="noopener noreferrer">
+                   <GitBranch className="mr-2 h-5 w-5" />
+                   GitHub リポジトリを見る
+                </a>
+             </Button>
+          </motion.section>
 
-          <a href="/docs/security/checklist" className="group relative flex items-center gap-x-3 rounded-lg border border-border bg-card p-6 hover:bg-card/80">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20">
-              <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-              </svg>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">セキュリティチェックリスト</h4>
-              <p className="mt-1 text-sm text-muted-foreground">デプロイ前のセキュリティ確認項目</p>
-            </div>
-          </a>
+          {/* 5. 面倒なことは AI にお任せ */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeIn}>
+            <h2 className="text-3xl font-semibold tracking-tight mb-6 border-b pb-2">面倒な作業は Te<span className="text-xl align-middle">🖐️</span>AI にお任せ</h2>
+            <p className="text-lg text-muted-foreground">
+              開発プロセスには、環境設定、依存関係の解決、定型的なコードの記述、API キーの管理など、多くの面倒な作業が伴います。
+              TeAI.io は、これらの複雑で時間のかかるタスクを AI に任せることで、開発者がより創造的で本質的な作業に集中できるように設計されています。
+              「こんなことがしたい」と伝えるだけで、あとは TeAI.io が良きに計らってくれます。
+            </p>
+          </motion.section>
+          
+          {/* 6. APIアクセス */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeIn}>
+            <h2 className="text-3xl font-semibold tracking-tight mb-6 border-b pb-2">API による操作</h2>
+            <p className="text-lg text-muted-foreground mb-4">
+              TeAI.io のプラットフォーム自体も、柔軟な連携や自動化を可能にするために API を提供しています。
+              これにより、インスタンスの起動・停止・削除、状態の確認などをプログラムから制御できます。
+            </p>
+             <p className="text-lg text-muted-foreground">
+                独自の開発ツールや CI/CD パイプラインに TeAI.io を組み込むことで、より高度な自動化ワークフローを構築することが可能です。
+                API の詳細については、今後のドキュメント更新で提供予定です。
+             </p>
+          </motion.section>
+
+          {/* 7. Call to Action */}
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={fadeIn} className="text-center pt-16">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tighter mb-6">さあ、始めましょう！</h2>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
+              複雑な手順は一切不要です。今すぐ TeAI.io にログインして、あなたの最初の AI 開発サーバーを立ち上げてみましょう。
+            </p>
+            <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+              <Link href="/dashboard">
+                <Rocket className="mr-2 h-5 w-5" />
+                ダッシュボードへ移動してサーバーを起動
+              </Link>
+            </Button>
+          </motion.section>
         </div>
       </div>
     </div>

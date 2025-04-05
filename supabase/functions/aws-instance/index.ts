@@ -4,7 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { IAMClient, CreateUserCommand, CreateAccessKeyCommand, AttachUserPolicyCommand } from "npm:@aws-sdk/client-iam@^3";
-import { EC2Client, RunInstancesCommand, DescribeInstancesCommand, TerminateInstancesCommand, StopInstancesCommand, StartInstancesCommand, ModifyInstanceAttributeCommand, CreateTagsCommand } from "npm:@aws-sdk/client-ec2@^3";
+import { EC2Client, RunInstancesCommand, DescribeInstancesCommand, TerminateInstancesCommand, StopInstancesCommand, StartInstancesCommand, ModifyInstanceAttributeCommand, CreateTagsCommand, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand } from "npm:@aws-sdk/client-ec2@^3";
 
 const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -19,6 +19,13 @@ function encodeBase64(str: string): string {
 
 serve(async (req: Request) => {
   console.log(`Incoming request: Method=${req.method}, Origin=${req.headers.get('Origin')}`)
+
+  // --- Get Requester IP --- 
+  // Deno Deploy uses 'x-forwarded-for'. Local testing might need adjustment.
+  const requesterIpHeader = req.headers.get('x-forwarded-for');
+  const requesterIp = requesterIpHeader ? requesterIpHeader.split(',')[0].trim() : null;
+  console.log('Requester IP:', requesterIp);
+  // -------------
 
   // Initialize Supabase clients
   const supabaseAdmin = createClient(
@@ -225,6 +232,58 @@ serve(async (req: Request) => {
 
     switch (action) {
       case 'create': {
+        // --- Create Security Group --- 
+        let securityGroupId: string | undefined;
+        if (requesterIp) {
+            try {
+                const sgName = `teai-sg-${user.id}-${Math.random().toString(36).substring(2, 8)}`;
+                const sgDescription = `Security group for Teai instance, allowing access from ${requesterIp}`;
+                const createSgCommand = new CreateSecurityGroupCommand({
+                    GroupName: sgName,
+                    Description: sgDescription,
+                    // VpcId: "YOUR_DEFAULT_VPC_ID", // Specify VPC ID if not using default VPC
+                    TagSpecifications: [{
+                        ResourceType: "security-group",
+                        Tags: [
+                            { Key: "Name", Value: sgName },
+                            { Key: "CreatedBy", Value: "TeaiFunction" },
+                            { Key: "UserId", Value: user.id }
+                        ]
+                    }]
+                });
+                const sgResult = await ec2.send(createSgCommand);
+                securityGroupId = sgResult.GroupId;
+                console.log(`Created Security Group: ${securityGroupId}`);
+
+                if (securityGroupId) {
+                    // Authorize all traffic from the user's IP
+                    const authorizeAllCommand = new AuthorizeSecurityGroupIngressCommand({
+                        GroupId: securityGroupId,
+                        IpPermissions: [{
+                            IpProtocol: "-1", // -1 signifies all protocols and ports
+                            // FromPort and ToPort are not needed when IpProtocol is -1
+                            UserIdGroupPairs: [],
+                            IpRanges: [{ CidrIp: `${requesterIp}/32`, Description: "Allow all traffic from user IP" }]
+                        }]
+                    });
+                    await ec2.send(authorizeAllCommand);
+                    console.log(`Authorized all traffic for ${requesterIp} in SG ${securityGroupId}`);
+                }
+            } catch (sgError) {
+                console.error("Failed to create/configure security group:", sgError);
+                // Decide if you want to proceed without the specific SG or throw an error
+                // securityGroupId = undefined; // Fallback to default SG? Or throw?
+                throw new Error(`セキュリティグループの作成または設定に失敗しました: ${sgError.message}`);
+            }
+        } else {
+            console.warn("Requester IP not found, potentially falling back to default security group.");
+            // Handle case where IP is not found - maybe use a default SG ID?
+            // securityGroupId = "sg-xxxxxxxx"; // Example default SG
+            // Or throw an error if IP-specific SG is mandatory
+             throw new Error("リクエスト元の IP アドレスが特定できなかったため、セキュリティグループを作成できませんでした。");
+        }
+        // -------------
+
         // Create new instance
         const createResult = await ec2.send(new RunInstancesCommand({
           ImageId: "ami-0d7927c66a4f58940",
@@ -232,6 +291,9 @@ serve(async (req: Request) => {
           MinCount: 1,
           MaxCount: 1,
           KeyName: "teai-key",
+          // --- Assign the created Security Group --- 
+          SecurityGroupIds: securityGroupId ? [securityGroupId] : undefined, // Use created SG or undefined (defaults)
+          // -----------
           UserData: encodeBase64(`#!/bin/bash
 # Detect OS
 if [ -f /etc/os-release ]; then
@@ -314,15 +376,39 @@ fi
                   Key: "Domain",
                   Value: `oh-${Math.random().toString(36).substring(2, 8)}.teai.io`,
                 },
-              ],
+                // Add Security Group ID tag for reference (optional)
+                securityGroupId ? { Key: "SecurityGroupId", Value: securityGroupId } : undefined,
+              ].filter(tag => tag !== undefined) as { Key: string, Value: string }[] // Filter out undefined tag
             },
-          ],
+            // Tag the Security Group itself (if created)
+            securityGroupId ? {
+                 ResourceType: "security-group",
+                 Resources: [securityGroupId],
+                 Tags: [
+                    { Key: "InstanceId", Value: "pending" } // Will be updated later maybe
+                 ]
+             } : undefined
+          ].filter(spec => spec !== undefined) as any, // Filter out undefined spec
         }))
+
+        const instanceId = createResult.Instances?.[0].InstanceId;
+
+        // Tag the Security Group with the Instance ID after creation (optional but helpful)
+        if (securityGroupId && instanceId) {
+            try {
+                 await ec2.send(new CreateTagsCommand({
+                     Resources: [securityGroupId],
+                     Tags: [{ Key: "InstanceId", Value: instanceId }]
+                 }));
+            } catch(tagError) {
+                console.warn(`Failed to tag Security Group ${securityGroupId} with Instance ID ${instanceId}:`, tagError);
+            }
+        }
 
         return new Response(
           JSON.stringify({ 
             success: true, 
-            instanceId: createResult.Instances?.[0].InstanceId 
+            instanceId: instanceId
           }),
           { 
             headers: corsHeaders,
