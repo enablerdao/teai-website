@@ -31,64 +31,30 @@ export default function DashboardLayout({
   const [user, setUser] = useState<User | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false); // Reset to check via RPC
-  const supabase = createClientComponentClient();
+  // For development, we're not using Supabase
+  const supabase = null as any;
 
   useEffect(() => {
-    const fetchUserDataAndAdminStatus = async () => {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (authError) {
-         console.error("Auth error:", authError);
-         setIsAdmin(false);
-         setCreditBalanceYen(null);
-         return;
-      }
-
-      if (user) {
-        // Fetch admin status using Supabase function
-        try {
-          const { data: isAdminData, error: rpcError } = await supabase.rpc('is_admin');
-          if (rpcError) throw rpcError;
-          setIsAdmin(!!isAdminData);
-        } catch (error) {
-          console.error('Error checking admin status:', error);
-          setIsAdmin(false); // Default to false on error
-        }
-
-        // Fetch credit balance
-        try {
-            const { data: creditData, error: creditError } = await supabase
-            .from('user_credits')
-            .select('balance')
-            .eq('user_id', user.id)
-            .single();
-            if (creditError && creditError.code !== 'PGRST116') { // Ignore "No rows found" error
-                 throw creditError;
-            }
-            setCreditBalanceYen(creditData?.balance ?? 0);
-        } catch (error) {
-            console.error("Error fetching credit balance:", error);
-            setCreditBalanceYen(null);
-        }
-      } else {
-        // Not logged in
-        setIsAdmin(false);
-        setCreditBalanceYen(null);
+    // For development purposes, we're setting up a mock user
+    const mockUser = {
+      id: 'dev-user-id',
+      email: 'dev@example.com',
+      user_metadata: {
+        avatar_url: null
       }
     };
-    fetchUserDataAndAdminStatus();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Refetch user data and admin status on auth change
-      fetchUserDataAndAdminStatus();
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+    
+    setUser(mockUser as any);
+    setIsAdmin(true); // Set to true for development
+    setCreditBalanceYen(1000); // Set a mock credit balance
+    
+    // No need for subscription in development mode
+    return () => {};
+  }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // For development, we're not actually signing out
+    console.log('Sign out clicked');
   };
 
   const creditBalance = creditBalanceYen !== null ? creditBalanceYen * CREDIT_RATE : null;
