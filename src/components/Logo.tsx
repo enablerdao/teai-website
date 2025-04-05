@@ -1,6 +1,16 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 export function Logo() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <svg
       className="h-10 w-auto"

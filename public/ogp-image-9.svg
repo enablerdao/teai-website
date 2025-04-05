@@ -1,0 +1,17 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F9FAFB"/>
+  <!-- Background Icons -->
+  <g fill="#E5E7EB" opacity="0.3">
+    <!-- Code Bracket -->
+    <path transform="translate(100, 100) scale(1.5)" d="M9.47,5.97L14.5,11l-5.03,5.03L8,14.59,11.59,11,8,7.41ZM14.53,16.03L19.56,11,14.53,5.97,16,4.56,22.44,11,16,17.44Z"/>
+    <!-- Lightbulb -->
+    <path transform="translate(800, 400) scale(1.5)" d="M12,2A7,7,0,0,0,7.1,14.76L7,15v2a1,1,0,0,0,1,1h8a1,1,0,0,0,1-1V15l-.1-.24A7,7,0,0,0,12,2Zm1,15H11V16h2Zm2.34-2.66L15,13.74V14a3,3,0,0,1-6,0v-.26l-.34.92L8,14.62V13.1a5,5,0,0,1,8,2.56Z"/>
+    <!-- Gear -->
+    <path transform="translate(200, 500) scale(1.5)" d="M19.43,12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5,0,0,0,.12-.64l-2-3.46a.5.5,0,0,0-.61-.22l-2.49,1a7.6,7.6,0,0,0-1.74-.98l-.37-2.65A.5.5,0,0,0,14,2H10a.5.5,0,0,0-.49.4l-.37,2.65a7.59,7.59,0,0,0-1.74.98l-2.49-1a.5.5,0,0,0-.61.22l-2,3.46a.5.5,0,0,0,.12.64l2.11,1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11,1.65a.5.5,0,0,0-.12.64l2,3.46a.5.5,0,0,0,.61.22l2.49-1a7.6,7.6,0,0,0,1.74.98l.37,2.65A.5.5,0,0,0,10,22h4a.5.5,0,0,0,.49-.4l.37-2.65a7.59,7.59,0,0,0,1.74-.98l2.49,1a.5.5,0,0,0,.61-.22l2-3.46a.5.5,0,0,0-.12-.64ZM12,15.5A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/>
+    <!-- Cloud Upload -->
+    <path transform="translate(900, 150) scale(1.5)" d="M19.35,10.04C18.67,6.59,15.64,4,12,4,9.11,4,6.6,5.64,5.35,8.04,2.34,8.36,0,10.91,0,14a6,6,0,0,0,6,6h13a5,5,0,0,0,1.15-9.82ZM14,13v4h-4v-4H7l5-5,5,5Z"/>
+   </g>
+  <!-- Center Content -->
+  <text x="600" y="310" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="140" font-weight="bold" fill="#374151" text-anchor="middle">Te<tspan baseline-shift="-15%" font-size="90%">🖐️</tspan>AI.io</text>
+  <text x="600" y="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" fill="#6B7280" text-anchor="middle">誰でも開発できるクラウドプラットフォーム</text>
+</svg> 

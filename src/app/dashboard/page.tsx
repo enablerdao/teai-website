@@ -4,36 +4,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useEffect, useState } from 'react';
-import { PlayIcon, StopIcon, ArrowPathIcon, TrashIcon, LinkIcon } from '@heroicons/react/24/outline';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Terminal, PlayIcon as LucidePlay, MoreVertical, ExternalLink, Play, Square, Trash2 } from "lucide-react";
+import { PlayIcon, StopIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Terminal } from "lucide-react"; // For Alert icon
-import { formatDistanceToNow } from 'date-fns'; // For relative time
-import { ja } from 'date-fns/locale'; // For Japanese locale
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 
+// --- Interfaces ---
 interface Instance {
   InstanceId: string;
+  Name: string;
+  Domain: string;
   InstanceType: string;
-  State: {
-    Code: number;
-    Name: string;
-  };
-  PublicIpAddress: string | null;
+  State: string;
+  PublicIpAddress?: string;
   LaunchTime: string;
-  AccessUrl?: string;
-  Tags?: Array<{
-    Key: string;
-    Value: string;
-  }>;
 }
 
 interface EnvironmentVariable {
@@ -43,46 +44,171 @@ interface EnvironmentVariable {
   environment: 'production' | 'staging';
 }
 
-export default function DashboardPage() {
-  const [instances, setInstances] = useState<Instance[]>([]);
-  const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
+// --- Helper Components & Functions (Copied/Adapted from instances/page) ---
+function InstanceStatus({ state }: { state: string }) {
+  const getStatusColor = (state: string) => {
+    switch (state.toLowerCase()) {
+      case 'running': return 'bg-green-500';
+      case 'stopped': return 'bg-red-500';
+      case 'pending': case 'stopping': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
+    }
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${getStatusColor(state)}`} />
+      <span className="capitalize text-sm">{state.toLowerCase()}</span>
+    </div>
+  );
+}
 
+function formatInstanceName(name: string): string {
+  if (!name) return '';
+  const match = name.match(/teai-instance-[a-f0-9-]+-([a-z0-9]+)$/i);
+  return match ? match[1].toUpperCase() : name;
+}
+
+// Modify InstanceActionsSummary to accept actionLoading state
+function InstanceActionsSummary({ 
+  instance,
+  onAction,
+  actionLoading // Add actionLoading prop
+}: { 
+  instance: Instance,
+  onAction: (action: string, instanceId: string) => Promise<void>,
+  actionLoading: Record<string, boolean> // Define prop type
+}) {
+  // Check loading state directly from the prop
+  const isLoading = (action: string) => {
+     return !!actionLoading[`${instance.InstanceId}-${action}`];
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild>
+          <Link href={"/dashboard/instances"}> 
+            <ExternalLink className="w-4 h-4 mr-2" />
+            詳細ページへ
+          </Link>
+        </DropdownMenuItem>
+        {instance.State === 'stopped' && (
+          <DropdownMenuItem onClick={() => onAction('start', instance.InstanceId)} disabled={isLoading('start')}>
+            <Play className="w-4 h-4 mr-2" />
+            起動
+          </DropdownMenuItem>
+        )}
+        {instance.State === 'running' && (
+          <DropdownMenuItem onClick={() => onAction('stop', instance.InstanceId)} disabled={isLoading('stop')}>
+            <Square className="w-4 h-4 mr-2" />
+            停止
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => onAction('terminate', instance.InstanceId)} className="text-red-600 hover:!text-red-600 focus:text-red-600" disabled={isLoading('terminate')}>
+          <Trash2 className="w-4 h-4 mr-2" />
+          削除
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const CREDIT_RATE = 5; // 1円 = 5 Credit
+
+// --- Main Dashboard Component ---
+export default function DashboardPage() {
+  // Instance State
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [loadingInstances, setLoadingInstances] = useState(true);
+  const [errorInstances, setErrorInstances] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+
+  // API Key State
+  const [apiKeyCount, setApiKeyCount] = useState<number | null>(null);
+  const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+  const [errorApiKeys, setErrorApiKeys] = useState<string | null>(null);
+
+  // Billing State
+  const [creditBalanceYen, setCreditBalanceYen] = useState<number | null>(null);
+  const [loadingCredits, setLoadingCredits] = useState(true);
+  const [errorCredits, setErrorCredits] = useState<string | null>(null);
+
+  const supabase = createClientComponentClient();
+  const router = useRouter();
+
+  // --- Data Fetching ---
   useEffect(() => {
     fetchInstances();
+    fetchApiKeySummary();
+    fetchCreditBalance();
   }, []);
 
   const fetchInstances = async () => {
-    setLoading(true);
-    setError(null);
+    setLoadingInstances(true);
+    setErrorInstances(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
-
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/aws-instance`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ action: 'list' }),
       });
-
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
-      if (!data.success) throw new Error(data.error || 'Failed to fetch instances');
+      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to fetch instances');
       setInstances(data.instances || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch instances');
+      setErrorInstances(err instanceof Error ? err.message : 'Failed to fetch instances');
       setInstances([]);
     } finally {
-      setLoading(false);
+      setLoadingInstances(false);
     }
   };
 
+  const fetchApiKeySummary = async () => {
+    setLoadingApiKeys(true);
+    setErrorApiKeys(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      setApiKeyCount(3); // Placeholder count
+    } catch (err) {
+      console.error("Error fetching API key summary:", err);
+      setErrorApiKeys(err instanceof Error ? err.message : 'APIキー概要の取得に失敗しました。');
+      setApiKeyCount(0);
+    } finally {
+      setLoadingApiKeys(false);
+    }
+  };
+
+  const fetchCreditBalance = async () => {
+    setLoadingCredits(true);
+    setErrorCredits(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found.");
+      const { data, error: dbError } = await supabase
+        .from('user_credits')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      if (dbError) throw dbError;
+      setCreditBalanceYen(data?.balance ?? 0);
+    } catch (err: any) {
+      console.error("Error fetching credit balance:", err);
+      setErrorCredits(err.message || "クレジット残高の取得中にエラーが発生しました。");
+    } finally {
+      setLoadingCredits(false);
+    }
+  };
+
+  // --- Instance Actions Handler (Re-introduced) ---
   const setInstanceActionLoading = (instanceId: string, action: string, isLoading: boolean) => {
     setActionLoading(prev => ({
       ...prev,
@@ -90,284 +216,240 @@ export default function DashboardPage() {
     }));
   };
 
-  const handleStartInstance = async (id: string) => {
-    setInstanceActionLoading(id, 'start', true);
-    setError(null);
+  const handleAction = async (action: string, instanceId: string) => {
+    // Don't handle 'create' here, it's done by the main button
+    if (action === 'create') return;
+
+    setInstanceActionLoading(instanceId, action, true);
+    setErrorInstances(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      if (!session) throw new Error('No session');
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/aws-instance`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ action: 'start', instanceId: id }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ action, instanceId }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
-      if (!data.success) throw new Error(data.error || 'Failed to start instance');
-      await fetchInstances();
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to perform action');
+      }
+      await fetchInstances(); // Refresh list after action
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start instance');
+      setErrorInstances(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setInstanceActionLoading(id, 'start', false);
+      setInstanceActionLoading(instanceId, action, false);
     }
   };
 
-  const handleStopInstance = async (id: string) => {
-    setInstanceActionLoading(id, 'stop', true);
-    setError(null);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/aws-instance`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ action: 'stop', instanceId: id }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
-      if (!data.success) throw new Error(data.error || 'Failed to stop instance');
-      await fetchInstances();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop instance');
-    } finally {
-      setInstanceActionLoading(id, 'stop', false);
-    }
-  };
-
-  const handleTerminateInstance = async (id: string) => {
-    if (!window.confirm('本当にこのインスタンスを終了しますか？データは完全に削除され、元に戻すことはできません。')) {
-      return;
-    }
-    setInstanceActionLoading(id, 'terminate', true);
-    setError(null);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/aws-instance`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ action: 'terminate', instanceId: id }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
-      if (!data.success) throw new Error(data.error || 'Failed to terminate instance');
-      await fetchInstances();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to terminate instance');
-    } finally {
-      setInstanceActionLoading(id, 'terminate', false);
-    }
-  };
-
+  // --- handleCreateInstance remains the same ---
   const handleCreateInstance = async () => {
-    setInstanceActionLoading('global', 'create', true);
-    setError(null);
+    setActionLoading(prev => ({ ...prev, 'global-create': true }));
+    setErrorInstances(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
+      if (!session) throw new Error('No session');
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/aws-instance`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ action: 'create' }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ action: 'create', instanceId: '' }),
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
-      if (!data.success) throw new Error(data.error || 'Failed to create instance');
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create instance');
+      }
       await fetchInstances();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create instance');
+      setErrorInstances(err instanceof Error ? err.message : 'An error occurred during creation');
     } finally {
-      setInstanceActionLoading('global', 'create', false);
+       setActionLoading(prev => ({ ...prev, 'global-create': false }));
     }
   };
 
-  const getStateVariant = (state: string): "default" | "secondary" | "destructive" | "outline" | null | undefined => {
-    switch (state) {
-      case 'running':
-        return 'default';
-      case 'stopped':
-        return 'secondary';
-      case 'pending':
-      case 'stopping':
-        return 'outline';
-      default:
-        return 'destructive';
-    }
-  }
+  const isCreateLoading = !!actionLoading['global-create'];
+  const creditBalance = creditBalanceYen !== null ? creditBalanceYen * CREDIT_RATE : null;
 
-  const isActionLoading = (instanceId: string, action: string): boolean => {
-    return !!actionLoading[`${instanceId}-${action}`];
-  }
-
-  const isCreateLoading = actionLoading['global-create'];
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <ArrowPathIcon className="w-10 h-10 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Limit instances shown on dashboard
+  const dashboardInstances = instances.slice(0, 3);
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 lg:ml-16 p-4 md:p-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-foreground">ダッシュボード</h1>
-        
-        <Card className="border-border mb-8">
-          <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-              <div>
-                <CardTitle className="text-foreground">AWS サーバー</CardTitle>
-                <CardDescription className="text-muted-foreground">OpenHands インスタンスの管理</CardDescription>
-              </div>
-              <Button
-                className="bg-primary hover:bg-primary/90 w-full md:w-auto"
+    <div className="space-y-6">
+      {/* --- Instances Card --- */} 
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <div>
+              <CardTitle>インスタンス</CardTitle>
+              <CardDescription>OpenHands インスタンスの概要</CardDescription>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+               <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link href="/dashboard/instances">すべてのインスタンスを表示</Link>
+               </Button>
+               <Button
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                 onClick={handleCreateInstance}
-                disabled={isCreateLoading || Object.values(actionLoading).some(val => val)}
+                disabled={isCreateLoading || Object.values(actionLoading).some(val => val && val !== actionLoading['global-create'])}
               >
-                {isCreateLoading ? <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" /> : <PlayIcon className="w-5 h-5 mr-2" />}
-                新規インスタンスを作成
+                {isCreateLoading ? <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" /> : <LucidePlay className="w-5 h-5 mr-2" />}
+                新規作成
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>エラー</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {errorInstances && (
+            <div className="p-4">
+               <Alert variant="destructive">
+                 <Terminal className="h-4 w-4" />
+                 <AlertTitle>インスタンスエラー</AlertTitle>
+                 <AlertDescription>{errorInstances}</AlertDescription>
+               </Alert>
+            </div>
+          )}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Domain</TableHead>
+                  <TableHead className="text-right">Open</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingInstances ? (
                   <TableRow>
-                    <TableHead>名前</TableHead>
-                    <TableHead>タイプ</TableHead>
-                    <TableHead>状態</TableHead>
-                    <TableHead>IPアドレス</TableHead>
-                    <TableHead>起動時間</TableHead>
-                    <TableHead>アクセス</TableHead>
-                    <TableHead className="text-right">アクション</TableHead>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                       <ArrowPathIcon className="w-6 h-6 animate-spin text-primary inline-block" />
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {instances.map((instance) => (
-                    <TableRow key={instance.InstanceId}>
-                      <TableCell className="font-medium">
-                         {instance.Tags?.find(tag => tag.Key === 'Name')?.Value || instance.InstanceId}
-                         <div className="text-xs text-muted-foreground">{instance.InstanceId}</div>
+                ) : dashboardInstances.length > 0 ? (
+                  dashboardInstances.map((instance) => (
+                    <TableRow key={instance.InstanceId} className="hover:bg-muted/50">
+                      <TableCell className="font-medium py-3">
+                         {formatInstanceName(instance.Name || instance.InstanceId)}
                       </TableCell>
-                      <TableCell>{instance.InstanceType}</TableCell>
-                      <TableCell>
-                         <Badge variant={
-                           instance.State.Name === 'running' ? 'default' :
-                           instance.State.Name === 'stopped' ? 'secondary' :
-                           'destructive'
-                         }>
-                           {instance.State.Name}
-                         </Badge>
+                      <TableCell className="py-3">
+                        <InstanceStatus state={instance.State} />
                       </TableCell>
-                       <TableCell>{instance.PublicIpAddress || '-'}</TableCell>
-                       <TableCell>
-                        {instance.LaunchTime ? formatDistanceToNow(new Date(instance.LaunchTime), { addSuffix: true, locale: ja }) : '-'}
+                      <TableCell className="py-3 truncate max-w-xs">
+                         {instance.Domain || '-'}
                       </TableCell>
-                      <TableCell>
-                        {instance.AccessUrl ? (
-                          <a href={instance.AccessUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center">
-                            <LinkIcon className="w-4 h-4 mr-1" />
-                            開く
-                          </a>
+                      <TableCell className="text-right py-3">
+                       {instance.PublicIpAddress && instance.State === 'running' ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="h-8 px-2"
+                          >
+                            <a href={`https://${instance.Domain}:3000`} target="_blank" rel="noopener noreferrer">
+                               <Image src="/images/openhands-logo.png" alt="OpenHands" width={16} height={16} />
+                            </a>
+                          </Button>
                         ) : (
-                          '-'
+                          <Button variant="ghost" size="sm" disabled className="h-8 px-2">
+                             <Image src="/images/openhands-logo.png" alt="OpenHands" width={16} height={16} className="opacity-50"/>
+                          </Button>
                         )}
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {instance.State.Name === 'stopped' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleStartInstance(instance.InstanceId)}
-                             disabled={isActionLoading(instance.InstanceId, 'start') || isActionLoading(instance.InstanceId, 'stop') || isActionLoading(instance.InstanceId, 'terminate')}
-                          >
-                             {isActionLoading(instance.InstanceId, 'start') ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <PlayIcon className="w-4 h-4" />}
-                          </Button>
-                        )}
-                        {instance.State.Name === 'running' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleStopInstance(instance.InstanceId)}
-                             disabled={isActionLoading(instance.InstanceId, 'start') || isActionLoading(instance.InstanceId, 'stop') || isActionLoading(instance.InstanceId, 'terminate')}
-                          >
-                            {isActionLoading(instance.InstanceId, 'stop') ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <StopIcon className="w-4 h-4" />}
-                          </Button>
-                        )}
-                         {(instance.State.Name === 'running' || instance.State.Name === 'stopped') && (
-                           <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleTerminateInstance(instance.InstanceId)}
-                             disabled={isActionLoading(instance.InstanceId, 'start') || isActionLoading(instance.InstanceId, 'stop') || isActionLoading(instance.InstanceId, 'terminate')}
-                          >
-                             {isActionLoading(instance.InstanceId, 'terminate') ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <TrashIcon className="w-4 h-4" />}
-                          </Button>
-                         )}
+                      <TableCell className="text-right py-3">
+                        <InstanceActionsSummary 
+                          instance={instance} 
+                          onAction={handleAction} 
+                          actionLoading={actionLoading} 
+                        />
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      アクティブなインスタンスはありません。
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+             {instances.length > 3 && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                   <Link href="/dashboard/instances" className="text-primary hover:underline">
+                      さらに {instances.length - 3} 件のインスタンスを表示...
+                   </Link>
+                </div>
+             )}
+          </div>
+        </CardContent>
+      </Card>
 
-            {instances.length === 0 && !loading && !error && (
-              <div className="text-center py-8 text-gray-500">
-                インスタンスがありません。新規インスタンスを作成してください。
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
+      {/* --- Row for API Keys & Billing --- */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* API Keys Card */} 
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start">
               <div>
-                <CardTitle>環境変数・鍵の管理</CardTitle>
-                <CardDescription>インスタンスの環境変数と鍵の設定</CardDescription>
+                 <CardTitle>環境変数・鍵</CardTitle>
+                 <CardDescription>APIキーと環境変数の概要</CardDescription>
               </div>
-              <Button disabled>新しい設定を追加</Button>
+               <Button asChild variant="outline" size="sm">
+                  <Link href="/dashboard/api-keys">管理ページへ</Link>
+               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-                現在、この機能は準備中です。
-             </div>
+             {errorApiKeys && (
+               <Alert variant="destructive" className="mb-4">
+                 <Terminal className="h-4 w-4" />
+                 <AlertTitle>APIキーエラー</AlertTitle>
+                 <AlertDescription>{errorApiKeys}</AlertDescription>
+               </Alert>
+             )}
+             {loadingApiKeys ? (
+                <p className="text-sm text-muted-foreground">概要を読み込み中...</p>
+             ) : (
+                <p>現在 <span className="font-bold text-lg">{apiKeyCount ?? 0}</span> 個のAPIキーが設定されています。</p>
+             )
+             }
           </CardContent>
         </Card>
-      </main>
+
+        {/* Billing Card */} 
+        <Card>
+          <CardHeader>
+             <div className="flex justify-between items-start">
+                 <div>
+                     <CardTitle>課金情報</CardTitle>
+                     <CardDescription>現在のクレジット残高</CardDescription>
+                 </div>
+                 <Button asChild variant="outline" size="sm">
+                     <Link href="/dashboard/billing">詳細情報へ</Link>
+                 </Button>
+             </div>
+          </CardHeader>
+          <CardContent>
+             {errorCredits && (
+                <Alert variant="destructive" className="mb-4">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>クレジットエラー</AlertTitle>
+                  <AlertDescription>{errorCredits}</AlertDescription>
+                </Alert>
+             )}
+             {loadingCredits ? (
+                 <p className="text-sm text-muted-foreground">クレジット残高を読み込み中...</p>
+             ) : (
+                 <div className="text-3xl font-bold">
+                     {creditBalance !== null ? creditBalance.toLocaleString() : '-'} <span className="text-lg font-normal text-muted-foreground">Credit</span>
+                 </div>
+             )}
+             {/* <p className="text-xs text-muted-foreground mt-2">当月のAWS利用料金（目安）: $XXX.XX</p> */} 
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

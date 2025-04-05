@@ -12,6 +12,11 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 }
 
+// Add this helper function at the top of the file, after imports
+function encodeBase64(str: string): string {
+  return btoa(str);
+}
+
 serve(async (req: Request) => {
   console.log(`Incoming request: Method=${req.method}, Origin=${req.headers.get('Origin')}`)
 
@@ -227,7 +232,7 @@ serve(async (req: Request) => {
           MinCount: 1,
           MaxCount: 1,
           KeyName: "teai-key",
-          UserData: Buffer.from(`#!/bin/bash
+          UserData: encodeBase64(`#!/bin/bash
 # Detect OS
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -292,7 +297,7 @@ if [ -f "package.json" ]; then
     npm install
     npm start
 fi
-`).toString('base64'),
+`),
           TagSpecifications: [
             {
               ResourceType: "instance",
@@ -380,7 +385,7 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
 `
           await ec2.send(new ModifyInstanceAttributeCommand({
             InstanceId: instanceId,
-            UserData: { Value: Buffer.from(userData).toString('base64') }
+            UserData: { Value: encodeBase64(userData) }
           }))
           requiresRestart = true
           message += 'SSH鍵を更新しました。再起動が必要です。'
@@ -424,7 +429,7 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
 `
         await ec2.send(new ModifyInstanceAttributeCommand({
           InstanceId: instanceId,
-          UserData: { Value: Buffer.from(userData).toString('base64') }
+          UserData: { Value: encodeBase64(userData) }
         }))
 
         return new Response(
@@ -494,7 +499,7 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
 `
         await ec2.send(new ModifyInstanceAttributeCommand({
           InstanceId: instanceId,
-          UserData: { Value: Buffer.from(updateUserData).toString('base64') }
+          UserData: { Value: encodeBase64(updateUserData) }
         }))
 
         return new Response(
@@ -567,19 +572,55 @@ chmod 600 /home/ec2-user/.ssh/authorized_keys
         }))
 
         const instances = describeResult.Reservations?.flatMap((r: any) => r.Instances || [])
-          .map((instance: any) => ({
+          .map((instance: any) => {
+            const tags = instance.Tags || []
+            const nameTag = tags.find((tag: any) => tag.Key === 'Name')?.Value || '-'
+            const domainTag = tags.find((tag: any) => tag.Key === 'Domain')?.Value || '-'
+            
+            return {
               InstanceId: instance.InstanceId,
+              Name: nameTag,
+              Domain: domainTag,
               InstanceType: instance.InstanceType,
               State: instance.State?.Name,
               PublicIpAddress: instance.PublicIpAddress,
               LaunchTime: instance.LaunchTime,
               AccessUrl: instance.PublicIpAddress ? `http://${instance.PublicIpAddress}:3000` : null
-          })) || [];
+            }
+          }) || [];
 
         return new Response(
           JSON.stringify({ 
             success: true, 
             instances: instances 
+          }),
+          { 
+            headers: corsHeaders,
+            status: 200,
+          }
+        )
+      }
+
+      case 'update_name': {
+        if (!instanceId) throw new Error('Instance ID is required')
+        const { name } = await req.json()
+
+        if (!name) throw new Error('Name is required for update_name action')
+
+        await ec2.send(new CreateTagsCommand({
+          Resources: [instanceId],
+          Tags: [
+            {
+              Key: "Name",
+              Value: name
+            }
+          ]
+        }))
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: `Instance name updated to ${name}`
           }),
           { 
             headers: corsHeaders,

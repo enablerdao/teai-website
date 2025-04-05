@@ -1,0 +1,33 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="ogpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F0F9FF; stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0F2FE; stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogpGrad)"/>
+
+  <!-- Left Side: Cloud Element (Abstract) -->
+  <path d="M350 180 Q300 180 280 230 C250 230 220 260 220 300 C220 340 250 370 280 370 L450 370 Q500 370 520 320 Q540 270 500 250 C490 210 450 180 400 180 A100 100 0 0 0 350 180 Z" fill="#A5F3FC" opacity="0.5" transform="translate(0, 50) scale(1.1)"/>
+   <path d="M420 250 Q380 250 360 290 C330 290 300 320 300 360 C300 400 330 430 360 430 L530 430 Q580 430 600 380 Q620 330 580 310 C570 270 530 240 480 240 A90 90 0 0 0 420 250 Z" fill="#67E8F9" opacity="0.6" transform="translate(-40, 80) scale(0.9)" />
+
+  <!-- Right Side: AI/Nodes Element -->
+  <circle cx="980" cy="180" r="18" fill="#06B6D4" opacity="0.6"/>
+  <circle cx="1060" cy="240" r="24" fill="#22D3EE" opacity="0.6"/>
+  <circle cx="950" cy="300" r="15" fill="#67E8F9" opacity="0.6"/>
+  <circle cx="1030" cy="360" r="20" fill="#06B6D4" opacity="0.6"/>
+  <circle cx="920" cy="420" r="17" fill="#22D3EE" opacity="0.6"/>
+  <line x1="980" y1="180" x2="1060" y2="240" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+  <line x1="980" y1="180" x2="950" y2="300" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+  <line x1="1060" y1="240" x2="950" y2="300" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+  <line x1="1060" y1="240" x2="1030" y2="360" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+  <line x1="950" y1="300" x2="1030" y2="360" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+  <line x1="950" y1="300" x2="920" y2="420" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+  <line x1="1030" y1="360" x2="920" y2="420" stroke="#0E7490" stroke-width="2.5" opacity="0.4"/>
+
+  <!-- Center Content -->
+  <text x="600" y="300" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'" font-size="110" font-weight="bold" fill="#0F172A" text-anchor="middle">TeAI</text>
+  <text x="600" y="370" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'" font-size="38" fill="#334155" text-anchor="middle">AI開発者のためのクラウドプラットフォーム</text>
+
+</svg>

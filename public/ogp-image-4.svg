@@ -1,0 +1,24 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F1F5F9"/>
+  <!-- Geometric Elements -->
+  <g opacity="0.7">
+    <!-- Left Cubes -->
+    <rect x="150" y="200" width="100" height="100" fill="#60A5FA" transform="skewY(-15)"/>
+    <rect x="200" y="250" width="100" height="100" fill="#3B82F6" transform="skewY(-15)"/>
+    <rect x="180" y="320" width="80" height="80" fill="#93C5FD" transform="skewY(-15)"/>
+    <!-- Right Network -->
+    <circle cx="950" cy="250" r="20" fill="#2DD4BF"/>
+    <circle cx="1050" cy="300" r="25" fill="#5EEAD4"/>
+    <circle cx="980" cy="380" r="18" fill="#14B8A6"/>
+    <circle cx="1080" cy="420" r="22" fill="#99F6E4"/>
+    <line x1="950" y1="250" x2="1050" y2="300" stroke="#0F766E" stroke-width="3"/>
+    <line x1="950" y1="250" x2="980" y2="380" stroke="#0F766E" stroke-width="3"/>
+    <line x1="1050" y1="300" x2="980" y2="380" stroke="#0F766E" stroke-width="3"/>
+    <line x1="1050" y1="300" x2="1080" y2="420" stroke="#0F766E" stroke-width="3"/>
+    <line x1="980" y1="380" x2="1080" y2="420" stroke="#0F766E" stroke-width="3"/>
+  </g>
+  <!-- Center Content -->
+  <rect x="350" y="250" width="500" height="130" fill="#F1F5F9" opacity="0.8" rx="10"/>
+  <text x="600" y="310" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="90" font-weight="bold" fill="#1E293B" text-anchor="middle">TeAI</text>
+  <text x="600" y="365" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="30" fill="#475569" text-anchor="middle">AI開発者のためのクラウドプラットフォーム</text>
+</svg> 

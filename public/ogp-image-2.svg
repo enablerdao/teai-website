@@ -1,0 +1,14 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F8FAFC"/>
+  <!-- Circuit Pattern -->
+  <defs>
+    <pattern id="circuit" patternUnits="userSpaceOnUse" width="100" height="100">
+      <path d="M0 50 H50 V0 M50 100 H100 V50 M50 50 H0 M100 50 H50" stroke="#E2E8F0" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="3" fill="#E2E8F0"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#circuit)" opacity="0.6"/>
+  <!-- Center Content -->
+  <text x="600" y="330" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="180" font-weight="bold" fill="#0F172A" text-anchor="middle">TeAI</text>
+  <text x="600" y="410" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="32" fill="#475569" text-anchor="middle">AI開発者のためのクラウドプラットフォーム</text>
+</svg> 

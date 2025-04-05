@@ -1,0 +1,16 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F0F9FF"/>
+  <!-- Building Blocks -->
+  <g opacity="0.6">
+      <rect x="100" y="400" width="120" height="120" rx="10" fill="#A5B4FC"/>
+      <rect x="240" y="350" width="100" height="170" rx="10" fill="#818CF8"/>
+      <rect x="150" y="280" width="150" height="90" rx="10" fill="#C7D2FE"/>
+      <rect x="900" y="420" width="150" height="100" rx="10" fill="#A5F3FC"/>
+      <rect x="950" y="300" width="120" height="120" rx="10" fill="#67E8F9"/>
+      <rect x="880" y="220" width="90" height="80" rx="10" fill="#CFFAFE"/>
+  </g>
+  <!-- Center Content -->
+  <rect x="350" y="250" width="500" height="130" fill="#FFFFFF" opacity="0.8" rx="15"/>
+  <text x="600" y="310" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="100" font-weight="bold" fill="#3730A3" text-anchor="middle">Te<tspan baseline-shift="-10%" font-size="70%">🖐️</tspan>AI.io</text>
+  <text x="600" y="365" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="30" fill="#4338CA" text-anchor="middle">誰でも開発できるクラウドプラットフォーム</text>
+</svg> 
