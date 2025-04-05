@@ -1,7 +1,7 @@
 # 🖐️ TeAI Website
 
 <div align="center">
-  <img src="public/images/teai-logo.svg" alt="TeAI Logo" width="200" />
+  <img src="public/images/logo.svg" alt="TeAI Logo" width="200" />
   <p><strong>AI開発者のためのクラウドプラットフォーム</strong></p>
   <p>
     <a href="https://github.com/enablerdao/teai-website/blob/main/LICENSE">
